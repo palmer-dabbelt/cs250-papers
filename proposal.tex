@@ -10,29 +10,29 @@
 \maketitle
 
 For our CS250 project we will be implementing an elliptic curve
-cryptography (ECC) engine that attaches via the Rocket accellerator
+cryptography (ECC) engine that attaches via the Rocket accelerator
 interface.  Specifically we will be implementing an accelerator for
-the elliptic-curve digital signature algorithm (ECDSA), a NIST
+the elliptic curve digital signature algorithm (ECDSA), a NIST
 standard widely used on the Internet for digital signatures.
 
 \section{Elliptic Curve Cryptography}
 
 Digital signature algorithms\cite{fips-186-3} are a widely used class
 of algorithms that are central to the functioning of the modern
-internet.  DSA\cite{us-dsa} (the original digital signature algorithm
+Internet.  DSA\cite{us-dsa} (the original digital signature algorithm
 as standardized by NIST) is a specialization of the ElGamal signature
-scheme\cite{elgamal-sig} that uses discrete logarithms over finate
-integer fields.  Finate integer fields are particularly easy to
+scheme\cite{elgamal-sig} that uses discrete logarithms over finite
+integer fields.  Finite integer fields are particularly easy to
 compute with electronics, so this gives DSA the advantage of being an
 efficient signature algorithm.
 
 The problem is that the discrete logarithm problem is not particularly
-strong over finate integer fields (specifically, there are known
+strong over finite integer fields (specifically, there are known
 sub-exponential algorithms\cite{adleman-subexp}).  As shown in
 Table~\ref{key-sizes}, DSA does not scale well to higher security
 levels.  This is important because code breaking algorithms are
 getting more efficient, leading to the need for higher security
-levels, therefor imposing higher computational costs on every node in
+levels, therefore imposing higher computational costs on every node in
 the system.
 
 \begin{table}[h]
@@ -57,12 +57,12 @@ from integers to elliptic curves, which (as shown in
 Table~\ref{key-sizes}) scale much better to higher security levels.
 While elliptic curves are significantly more difficult to build
 electronics for, this will eventually be offset by sheer key size
-alone.  The currenty accepted security level is 128 bits, at which
+alone.  The currently accepted security level is 128 bits, at which
 ECDSA already has a 10:1 advantage in key size.
 
 \section{ECDSA in Hardware}
 
-Unlike finate integer fields, elliptic curves do not map directly to
+Unlike finite integer fields, elliptic curves do not map directly to
 the hardware present in current microprocessors\cite{kss-ecdsa}.  This
 suggests that a hardware accelerator designed to compute over elliptic
 curves should lead to a significantly more efficient implementation
@@ -71,7 +71,7 @@ than in software alone.
 Previous projects\cite{nnll-ecdsa_hw} have shown that ECC hardware can
 be implemented efficiently, but were limited in the amount of
 design-space exploration that was attempted\cite{mmm-hw_ecc}.  There
-are three interesting axies on which to do design space exploration
+are three interesting axes on which to do design space exploration
 upon: the size of functional units, the types of functional units, and
 the location of the control logic.
 
