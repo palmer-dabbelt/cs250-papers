@@ -58,7 +58,10 @@ Table~\ref{key-sizes}) scale much better to higher security levels.
 While elliptic curves are significantly more difficult to build
 electronics for, this will eventually be offset by sheer key size
 alone.  The currently accepted security level is 128 bits, at which
-ECDSA already has a 10:1 advantage in key size.
+ECDSA already has a 10:1 advantage in key size. Shortening the key 
+size becomes even more important,as we approach a world in which 
+ubiquitous embedded systems must be able to securely transmit and 
+receive data. 
 
 \section{ECDSA in Hardware}
 
@@ -94,12 +97,20 @@ there should be some interesting tradeoffs based on how much of the
 state machine gets put into hardware vs how much is driven by the
 Rocket core.
 
+\section{The Rocket Core Interface}
+
+The ECC will make limited use of the Rocket Core Interface. Our 
+coprocessor will introudce two instructions: Sign and Validate. 
+Only a few loads and stores to the shared cache will be required for 
+fetching the input parameters and storing the output.  
+
 \section{Benchmarking}
 
 OpenSSL contains a fast, widely used, software implementation of
 ECDSA\cite{kasper-openssl_ecc}.  This software implementation running
 on an unmodified Rocket core will form our baseline to compare
 against.
+
 
 \bibliographystyle{plain}
 \bibliography{bibliography}
