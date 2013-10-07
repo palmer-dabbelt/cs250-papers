@@ -79,7 +79,7 @@ Previous projects\cite{nnll-ecdsa_hw} have shown that ECC hardware can
 be implemented efficiently, but were limited in the amount of
 design-space exploration that was attempted. \cite{mmm-hw_ecc} explored 
 the tradeoffs of different algorithms for computation, but did not explore 
-the design space of any particular algorithm (I think...).  There
+the design space of any particular algorithm.  There
 are three interesting axes on which to do design-space exploration
 upon: the size of functional units, the types of functional units, and
 the location of the control logic.
@@ -89,24 +89,50 @@ quite large: 80 bits is the smallest viable key size, while 256 bits
 is a reasonable but large key size.  As such, the multiplier can be built 
 as either one large block  which consumes a lot of power, or be composed of 
 smaller, chained multipliers that could be turned off to save power when a
-small key size is used (Among other things?).   
+small key size is used.
 
 ECC demands not just multiplication, but both more complicated and
 simpler operations as well -- for example, addition, doubling,
 squaring, and inverting are all required.  There should be interesting
 tradeoffs based on which of these operations are directly accelerated
-by hardware as opposed to which are mapped onto simpler units (I'm confused
-by this paragraph, isn't all of it directly accelerated by the hardware). 
+by hardware as opposed to which are mapped onto simpler units.  For
+example, we could choose to avoid building an inversion unit and
+instead map it onto the existing multiplication units.
 
 The control logic for an ECC processor is not simple: some necessary
 algorithms take thousands of cycles\cite{mmm-hw_ecc} to compute even
 when hardware accelerated.  Due to the length of these computations,
-it may become worthwhile to introduce a state machine in the Rocket core
-to simplify the control logic in the accelerator. While this would lose
-efficiency for the Rocket core, the accelerator could perform faster
-and take up less area. 
+it will almost certainly be useful to integrate a state machine
+directly into the accelerator so we can avoid burning a bunch of
+energy driving the accelelator from the Rocket pipeline.  There should
+be interesting tradeoffs between area, power, and programability
+inside here.
 
 \section{The Rocket Core Interface}
+
+ECDSA has very light memory requirements: we simply load a ~256-bit
+value from memory and then store the same size value out to memory,
+while computing on it for thousands of cycles.  This should provide an
+interesting space to explore: we can put memory hardware in the
+accelerator at the cost of some area, or piggyback on the Rocket
+core's memory hardware and push data over the coprocessor interface.
+
+In addition to memory concerns, we are planning on investigating how
+much control logic should live in the co-processor, and how much
+should live on the Rocket core.  As all of the ECDSA operations that
+would be sane to expose to the Rocket core are quite long (256-bit
+curve-addition is probable the fastest, and it will be dozens of
+cycles), the latency of the Rocket co-processor interface shouldn't be
+too hard to deal with.
+
+For ECDSA, the biggest limiting factor will be the low-width
+connection to the Rocket core -- ECDSA has to deal with pretty large
+numbers, and pushing them over a 64-bit pipe will probably
+significantly limit the amount of design-space exploration we can do.
+In other words, it would be wonderful to be able to get rid of storage
+inside the accelerator to provide a very small co-processor, but it
+will probably be too difficult to move data between the Rocket core
+and the co-processor so that probably won't be an option.
 
 The ECC will make limited use of the Rocket Core Interface. Our 
 coprocessor will introudce two instructions: Sign and Validate. More
@@ -114,14 +140,6 @@ instructions may be introduced if the Rocket core becomes responsible
 for handling part of the state machine. (The other 
 parameters in the instruction could maybe be used to define something
 like key size? It would be good if we can figure out a way to use this) 
-
-Only a few loads and stores to the shared cache will be required for 
-fetching the input parameters and storing the output. The register file
-will contain the fetch addresses, and the address of the result will be
-retruned through the 64-bit return value. (Anything else to talk about 
-here for the memory?) 
-
-(A lot of this section is self-explanatory, but I still think it is useful)
 
 \section{Benchmarking}
 
@@ -131,16 +149,21 @@ on an unmodified Rocket core will form our baseline to compare
 against. For analysis of power and area, we can compare to \cite{mmm-hw_ecc} 
 and \cite{nnll-ecdsa_hw}. 
 
-\section{Design Process}
+\section{Timeline}
 
-The first phase of the project will consist of learning the algorithms to be 
-implemented, and we will check our understanding by implementing them in software.
-For the next phase, we will design the ALUs and the control path for a fixed base case,
-and write Chisel code to be pushed through the VLSI tools. Next, we will generalize
-to any operating condition and repeat the steps. We will then choose a dimension to 
-change, either in the state-machine or ALUs, and compare results. More dimensions
-will be changed as time permits. We will also take advantage of the methodologies
-described in class such as lowering VDD while adding pipeline stages.  
+The design space of ECDSA naturally lends itself to a progression.
+Essentially the plan is to start with an entirely software-based
+implementation, and then accelerate specific functions until we end up
+with a more full-fledged accelerator.  With any luck we will be able
+to paramaterize the design sufficiently that we can keep the smaller
+cores around for a while in order to run data.
+
+\begin{itemize}
+\item October 8: Project Proposal
+\item October 29: Software ECDSA running on Rocket
+\item November 19: Adder and Multiplier running on co-processor
+\item December 10: Inverter running on co-processor
+\end{itemize}
 
 \bibliographystyle{plain}
 \bibliography{bibliography}
