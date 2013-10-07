@@ -13,7 +13,9 @@ For our CS250 project we will be implementing an elliptic curve
 cryptography (ECC) engine that attaches via the Rocket accelerator
 interface.  Specifically we will be implementing an accelerator for
 the elliptic curve digital signature algorithm (ECDSA), a NIST
-standard widely used on the Internet for digital signatures.
+standard widely used on the Internet for digital signatures. We will
+build off of previous work by doing a more involved design-space
+exploration. 
 
 \section{Elliptic Curve Cryptography}
 
@@ -33,7 +35,7 @@ Table~\ref{key-sizes}, DSA does not scale well to higher security
 levels.  This is important because code breaking algorithms are
 getting more efficient, leading to the need for higher security
 levels, therefore imposing higher computational costs on every node in
-the system.
+the system. 
 
 \begin{table}[h]
   \begin{center}
@@ -61,56 +63,84 @@ alone.  The currently accepted security level is 128 bits, at which
 ECDSA already has a 10:1 advantage in key size. Shortening the key 
 size becomes even more important,as we approach a world in which 
 ubiquitous embedded systems must be able to securely transmit and 
-receive data. 
+receive data.  
 
 \section{ECDSA in Hardware}
 
 Unlike finite integer fields, elliptic curves do not map directly to
-the hardware present in current microprocessors\cite{kss-ecdsa}.  This
+the hardware present in current microprocessors\cite{kss-ecdsa}. This
 suggests that a hardware accelerator designed to compute over elliptic
 curves should lead to a significantly more efficient implementation
-than in software alone.
+than in software alone. ECDSA requires more computation per bit than DSA, 
+so a hardware accelerator is necessary to fully take advantage of the 
+smaller key size. 
 
 Previous projects\cite{nnll-ecdsa_hw} have shown that ECC hardware can
 be implemented efficiently, but were limited in the amount of
-design-space exploration that was attempted\cite{mmm-hw_ecc}.  There
-are three interesting axes on which to do design space exploration
+design-space exploration that was attempted. \cite{mmm-hw_ecc} explored 
+the tradeoffs of different algorithms for computation, but did not explore 
+the design space of any particular algorithm (I think...).  There
+are three interesting axes on which to do design-space exploration
 upon: the size of functional units, the types of functional units, and
 the location of the control logic.
 
 Despite the fact that ECC involves smaller keys, the numbers are still
 quite large: 80 bits is the smallest viable key size, while 256 bits
-is a reasonable but large key size.  As such, there should be an
-interesting tradeoffs between having larger multipliers as opposed to
-smaller, chained multipliers.
+is a reasonable but large key size.  As such, the multiplier can be built 
+as either one large block  which consumes a lot of power, or be composed of 
+smaller, chained multipliers that could be turned off to save power when a
+small key size is used (Among other things?).   
 
 ECC demands not just multiplication, but both more complicated and
 simpler operations as well -- for example, addition, doubling,
 squaring, and inverting are all required.  There should be interesting
 tradeoffs based on which of these operations are directly accelerated
-by hardware as opposed to which are mapped onto simpler units.
+by hardware as opposed to which are mapped onto simpler units (I'm confused
+by this paragraph, isn't all of it directly accelerated by the hardware). 
 
 The control logic for an ECC processor is not simple: some necessary
 algorithms take thousands of cycles\cite{mmm-hw_ecc} to compute even
 when hardware accelerated.  Due to the length of these computations,
-there should be some interesting tradeoffs based on how much of the
-state machine gets put into hardware vs how much is driven by the
-Rocket core.
+it may become worthwhile to introduce a state machine in the Rocket core
+to simplify the control logic in the accelerator. While this would lose
+efficiency for the Rocket core, the accelerator could perform faster
+and take up less area. 
 
 \section{The Rocket Core Interface}
 
 The ECC will make limited use of the Rocket Core Interface. Our 
-coprocessor will introudce two instructions: Sign and Validate. 
+coprocessor will introudce two instructions: Sign and Validate. More
+instructions may be introduced if the Rocket core becomes responsible
+for handling part of the state machine. (The other 
+parameters in the instruction could maybe be used to define something
+like key size? It would be good if we can figure out a way to use this) 
+
 Only a few loads and stores to the shared cache will be required for 
-fetching the input parameters and storing the output.  
+fetching the input parameters and storing the output. The register file
+will contain the fetch addresses, and the address of the result will be
+retruned through the 64-bit return value. (Anything else to talk about 
+here for the memory?) 
+
+(A lot of this section is self-explanatory, but I still think it is useful)
 
 \section{Benchmarking}
 
 OpenSSL contains a fast, widely used, software implementation of
 ECDSA\cite{kasper-openssl_ecc}.  This software implementation running
 on an unmodified Rocket core will form our baseline to compare
-against.
+against. For analysis of power and area, we can compare to \cite{mmm-hw_ecc} 
+and \cite{nnll-ecdsa_hw}. 
 
+\section{Design Process}
+
+The first phase of the project will consist of learning the algorithms to be 
+implemented, and we will check our understanding by implementing them in software.
+For the next phase, we will design the ALUs and the control path for a fixed base case,
+and write Chisel code to be pushed through the VLSI tools. Next, we will generalize
+to any operating condition and repeat the steps. We will then choose a dimension to 
+change, either in the state-machine or ALUs, and compare results. More dimensions
+will be changed as time permits. We will also take advantage of the methodologies
+described in class such as lowering VDD while adding pipeline stages.  
 
 \bibliographystyle{plain}
 \bibliography{bibliography}
