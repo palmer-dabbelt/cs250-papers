@@ -103,7 +103,7 @@ The control logic for an ECC processor is not simple: some necessary
 algorithms take thousands of cycles\cite{mmm-hw_ecc} to compute even
 when hardware accelerated.  Due to the length of these computations,
 it will almost certainly be useful to integrate a state machine
-directly into the accelerator so we can avoid burning a bunch of
+directly into the accelerator so we can avoid burning 
 energy driving the accelelator from the Rocket pipeline.  There should
 be interesting tradeoffs between area, power, and programability
 inside here.
@@ -121,7 +121,7 @@ In addition to memory concerns, we are planning on investigating how
 much control logic should live in the co-processor, and how much
 should live on the Rocket core.  As all of the ECDSA operations that
 would be sane to expose to the Rocket core are quite long (256-bit
-curve-addition is probable the fastest, and it will be dozens of
+curve-addition is probably the fastest, and it will be dozens of
 cycles), the latency of the Rocket co-processor interface shouldn't be
 too hard to deal with.
 
@@ -137,9 +137,8 @@ and the co-processor so that probably won't be an option.
 The ECC will make limited use of the Rocket Core Interface. Our 
 coprocessor will introudce two instructions: Sign and Validate. More
 instructions may be introduced if the Rocket core becomes responsible
-for handling part of the state machine. (The other 
-parameters in the instruction could maybe be used to define something
-like key size? It would be good if we can figure out a way to use this) 
+for handling part of the state machine. The instruction will also need
+to be able to communicate the key length to the coprocessor. 
 
 \section{Benchmarking}
 
@@ -154,15 +153,16 @@ and \cite{nnll-ecdsa_hw}.
 The design space of ECDSA naturally lends itself to a progression.
 Essentially the plan is to start with an entirely software-based
 implementation, and then accelerate specific functions until we end up
-with a more full-fledged accelerator.  With any luck we will be able
+with a more full-fledged accelerator.  We will hopefully be able
 to paramaterize the design sufficiently that we can keep the smaller
-cores around for a while in order to run data.
+cores around for a while in order to run data. We will explore the design-
+space as we progress.
 
 \begin{itemize}
 \item October 8: Project Proposal
 \item October 29: Software ECDSA running on Rocket
 \item November 19: Adder and Multiplier running on co-processor
-\item December 10: Inverter running on co-processor
+\item December 7: Inverter running on co-processor
 \end{itemize}
 
 \bibliographystyle{plain}
