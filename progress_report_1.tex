@@ -98,6 +98,9 @@
       \includegraphics[width=0.9\linewidth,height=0.7\textheight,keepaspectratio]{point_add.uncrop.pdf}
     \end{center}
   \item $R = d*P$: Multiplication is just repeated addition
+    \begin{itemize}
+    \item Actually use double-and-add so it's $\log n$
+    \end{itemize}
   \end{itemize}
 \end{frame}
 
@@ -135,6 +138,16 @@
     \item $d*G$ for constant $G$
     \end{itemize}
   \item Timing and power side-channels
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Progress}
+
+  \begin{itemize}
+  \item OpenSSL running on x86
+  \item Modular arithmetic in software
+  \item Control block for point multiplier
   \end{itemize}
 \end{frame}
 
