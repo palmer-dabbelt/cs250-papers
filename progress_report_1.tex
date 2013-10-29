@@ -33,25 +33,6 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{The Discrete Logarithm Problem}
-
-  \begin{itemize}
-  \item $b^k = g$
-    \begin{itemize}
-    \item Difficult in one direction (given $b$ and $g$ find $k$)
-    \item Easy in another direction (given $b$ and $k$ find $g$)
-    \end{itemize}
-  \item Only asymetric for some groups
-    \begin{itemize}
-    \item $({\mathbb Z}_p)^\times$: Integers modulo some prime,
-      repeating multiplication
-    \item $GF(p)$: Elliptic curves modulo some prime, repeating
-      addition
-    \end{itemize}
-  \end{itemize}
-\end{frame}
-
-\begin{frame}
   \frametitle{Terminology}
 
   \begin{itemize}
@@ -67,10 +48,33 @@
     \begin{itemize}
     \item $\oplus$: Elliptic curve point addition
     \item $*$: Scalar times curve multiplication (repeated addition)
-    \item $*$ is the hard to reverse operation!
     \end{itemize}
   \item Capital letters are points on a curve
   \item Lower case letters are integers
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{The Discrete Logarithm Problem}
+
+  \begin{itemize}
+  \item $b^k = g$
+    \begin{itemize}
+    \item Difficult in one direction (given $b$ and $g$ find $k$)
+    \item Easy in another direction (given $b$ and $k$ find $g$)
+    \end{itemize}
+  \item Only asymetric for some groups
+    \begin{itemize}
+    \item $({\mathbb Z}_p)^\times$: Integers modulo some prime,
+      repeating multiplication
+    \item $GF(p)$: Elliptic curves modulo some prime, repeating
+      addition
+    \end{itemize}
+  \item Key generation: $Q_A = d_A * G$
+    \begin{itemize}
+    \item Given $d_A$ and $G$, $Q_A$ is easy to find
+    \item Given $Q_A$ and $G$, $d_A$ is hard to find
+    \end{itemize}
   \end{itemize}
 \end{frame}
 
@@ -126,8 +130,9 @@
     \begin{itemize}
     \item $(xP \oplus yQ)$ faster than $(xP) \oplus (yQ)$
     \item $(a \times b \mod n)$ faster than $(a\times b)\mod n$
-    \item $2a$ faster than $a \oplus a$
+    \item $2*P$ faster than $P \oplus P$
     \item $(P \oplus Q)_x$ faster than $(P\oplus Q)_y$
+    \item $d*G$ for constant $G$
     \end{itemize}
   \item Timing and power side-channels
   \end{itemize}
