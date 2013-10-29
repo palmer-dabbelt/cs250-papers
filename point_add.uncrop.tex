@@ -1,0 +1,70 @@
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows,calc}
+
+\begin{document}
+\thispagestyle{empty}
+
+% Define block styles
+\tikzstyle{input} = [rectangle, draw, fill=red!20, 
+    text width=2em, text centered, rounded corners, minimum height=2em]
+\tikzstyle{output} = [rectangle, draw, fill=green!20, 
+    text width=2em, text centered, rounded corners, minimum height=2em]
+\tikzstyle{block} = [rectangle, draw, fill=blue!10, 
+    text width=3em, text centered, rounded corners, minimum height=2.5em]
+\tikzstyle{speed} = [rectangle, draw, fill=blue!30, 
+    text width=3em, text centered, rounded corners, minimum height=2.5em]
+
+\tikzstyle{line} = [draw, -latex']
+
+\begin{tikzpicture}[node distance = 5em, auto]
+
+  \node [input] (px) {$P_x$};
+  \node [input, below of=px] (qx) {$Q_x$};
+  \node [input, below of=qx] (qy) {$Q_y$};
+  \node [input, below of=qy] (py) {$P_y$};
+
+  \node [right of=px] (rpx) {};
+  \node [right of=py] (rpy) {};
+  \node [right of=qx] (rqx) {};
+  \node [right of=qy] (rqy) {};
+
+  \node [speed] (sx) at ($ (rpx)!0.5!(rqx) $) {$-$};
+  \path [line] (px) -| (sx);
+  \path [line] (qx) -| (sx);
+
+  \node [speed] (sy) at ($ (rpy)!0.5!(rqy) $) {$-$};
+  \path [line] (py) -| (sy);
+  \path [line] (qy) -| (sy);
+
+  \node [speed, right of=sx] (inv) {$x^{-1}$};
+  \path [line] (sx) -- (inv);
+
+  \node [speed, below right of=inv] (mul1) {$\times$};
+  \path [line] (inv) -| (mul1);
+  \path [line] (sy) -| (mul1);
+
+  \node [speed, right of=mul1] (sq) {$x^2$};
+  \path [line] (mul1) -- (sq);
+
+  \node [speed, right of=sq] (sub1) {$-$};
+  \path [line] (sq) -- (sub1);
+  \path [line] (sy) -| (sub1);
+  \node [output, above of=sub1] (rx) {$R_x$};
+  \path [line] (sub1) -- (rx);
+
+  \node [speed, right of=sub1] (sub2) {$-$};
+  \path [line] (sub1) -- (sub2);
+
+  \node [speed, right of=sub2] (mul2) {$\times$};
+  \path [line] (sub2) -- (mul2);
+
+  \node [speed, right of=mul2] (sub3) {$-$};
+  \path [line] (mul2) -- (sub3);
+  \node [output, above of=sub3] (ry) {$R_y$};
+  \path [line] (sub3) -- (ry);
+
+\end{tikzpicture}
+
+\end{document}
+

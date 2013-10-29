@@ -1,0 +1,136 @@
+\documentclass{beamer}
+\usepackage{graphicx}
+\usepackage{multicol}
+
+\title{ECDSA Accelerator}
+\author{Kevin Linger and Palmer Dabbelt}
+\date{October 29, 2013}
+
+\begin{document}
+\maketitle
+
+\begin{frame}
+  \frametitle{ECDSA}
+
+  \begin{itemize}
+  \item Elliptic Curve Digital Signature Algorithm
+    \begin{itemize}
+    \item Look in \texttt{\textasciitilde/.ssh/known\_hosts}
+    \end{itemize}
+  \item Modified Version of DSA (Digital Signature Algorithm)
+    \begin{itemize}
+    \item Discrete logarithm problem
+    \item ECDSA uses elliptic curves (DSA uses integers)
+    \item Linear key growth, complicated mathematics
+    \end{itemize}
+  \item Good candidate for an accelerator
+    \begin{itemize}
+      \item Compute bound
+      \item Small internal state ($O$(1 kbit))
+      \item Very power hungry
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{The Discrete Logarithm Problem}
+
+  \begin{itemize}
+  \item $b^k = g$
+    \begin{itemize}
+    \item Difficult in one direction (given $b$ and $g$ find $k$)
+    \item Easy in another direction (given $b$ and $k$ find $g$)
+    \end{itemize}
+  \item Only asymetric for some groups
+    \begin{itemize}
+    \item $({\mathbb Z}_p)^\times$: Integers modulo some prime,
+      repeating multiplication
+    \item $GF(p)$: Elliptic curves modulo some prime, repeating
+      addition
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Terminology}
+
+  \begin{itemize}
+  \item Integer Operations
+    \begin{itemize}
+    \item $+$: Integer full addition [$n$-bit $\times$ $n$-bit
+      $\rightarrow$ $n+1$-bit]
+    \item $\times$: Integer full multiply [$n$-bit $\times$ $n$-bit
+      $\rightarrow$ $2n$-bit]
+    \item $x^{-1}$: Modular inverse [$^{-1}(x) \times x = 1$ (mod $n$)]
+    \end{itemize}
+  \item Curve Operations
+    \begin{itemize}
+    \item $\oplus$: Elliptic curve point addition
+    \item $*$: Scalar times curve multiplication (repeated addition)
+    \item $*$ is the hard to reverse operation!
+    \end{itemize}
+  \item Capital letters are points on a curve
+  \item Lower case letters are integers
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{ECDSA Signing and Verification}
+
+  \begin{center}
+    \begin{multicols}{2}
+      \includegraphics[width=0.9\linewidth,height=0.7\textheight,keepaspectratio]{ecdsa_sign.uncrop.pdf} \\
+      \includegraphics[width=0.9\linewidth,height=0.7\textheight,keepaspectratio]{ecdsa_verify.uncrop.pdf} \\
+    \end{multicols}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Elliptic Curve Arithmetic ($*$ and $\oplus$)}
+
+  \begin{itemize}
+  \item $R = P\oplus Q$: Defined by magic!
+    \begin{center}
+      \includegraphics[width=0.9\linewidth,height=0.7\textheight,keepaspectratio]{point_add.uncrop.pdf}
+    \end{center}
+  \item $R = d*P$: Multiplication is just repeated addition
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Integer Arithmetic ($+$, $\times$, mod $n$, and $x^{-1}$)}
+
+  \begin{itemize}
+  \item Most arithmetic done mod $n$
+    \begin{itemize}
+    \item $n$ is not a power of two
+    \end{itemize}
+  \item Montgomery multplier computes $a\times b\mod n$
+    \begin{itemize}
+    \item Direct computation -- no division
+    \end{itemize}
+  \item Montgomery inverter computes $x^{-1}\mod n$
+    \begin{itemize}
+    \item $O(1000)$ cycles -- limiting factor
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Design Space}
+
+  \begin{itemize}
+  \item Functional Unit Sizes
+  \item Location of control logic
+  \item Specialized units
+    \begin{itemize}
+    \item $(xP \oplus yQ)$ faster than $(xP) \oplus (yQ)$
+    \item $(a \times b \mod n)$ faster than $(a\times b)\mod n$
+    \item $2a$ faster than $a \oplus a$
+    \item $(P \oplus Q)_x$ faster than $(P\oplus Q)_y$
+    \end{itemize}
+  \item Timing and power side-channels
+  \end{itemize}
+\end{frame}
+
+\end{document}

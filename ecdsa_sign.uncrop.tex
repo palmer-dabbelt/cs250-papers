@@ -1,0 +1,47 @@
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+
+\begin{document}
+\thispagestyle{empty}
+
+% Define block styles
+\tikzstyle{input} = [rectangle, draw, fill=red!20, 
+    text width=2em, text centered, rounded corners, minimum height=2em]
+\tikzstyle{output} = [rectangle, draw, fill=green!20, 
+    text width=2em, text centered, rounded corners, minimum height=2em]
+\tikzstyle{block} = [rectangle, draw, fill=blue!10, 
+    text width=4em, text centered, rounded corners, minimum height=3em]
+\tikzstyle{speed} = [rectangle, draw, fill=blue!30, 
+    text width=4em, text centered, rounded corners, minimum height=3em]
+
+\tikzstyle{line} = [draw, -latex']
+
+\centering
+Signing
+
+\begin{tikzpicture}[node distance = 6em, auto]
+  \node [block]                (rng) {RNG};
+
+  \node [speed, below of=rng]  (xg)  {$*$};      \path [line] (rng) -- (xg);
+  \node [input, left of=xg]    (g)   {G};        \path [line] (g)   -- (xg);
+
+  \node [speed, below of=xg]   (mdn) {mod $n$};  \path [line] (xg)  -- (mdn);
+  \node [output, right of=mdn] (r)   {$r$};      \path [line] (mdn) -- (r);
+
+  \node [speed, below of=mdn]  (xda) {$\times$}; \path [line] (mdn) -- (xda);
+  \node [input, left of=xda]   (da)  {$d_A$};    \path [line] (da)  -- (xda);
+
+  \node [speed, below of=xda]  (add) {$+$};      \path [line] (xda) -- (add);
+  \node [block, left of=add]   (sha) {SHA-1};    \path [line] (sha) -- (add);
+  \node [input, left of=sha]   (m)   {$m$};      \path [line] (m)   -- (sha);
+
+  \node [speed, below of=add]  (mul) {$\times$}; \path [line] (add) -- (mul);
+  \node [output, right of=mul] (s)   {$s$};      \path [line] (mul) -- (s);
+
+  \node [speed, above left of=m] (inv) {$-1$};   \path [line] (rng) -| (inv);
+                                                 \path [line] (inv) |- (mul);
+\end{tikzpicture}
+
+\end{document}
+
