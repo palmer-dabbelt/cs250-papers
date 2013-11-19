@@ -1,6 +1,7 @@
 \documentclass{beamer}
 \usepackage{graphicx}
 \usepackage{multicol}
+\usepackage{vwcol}
 
 \title{ECDSA Accelerator}
 \author{Kevin Linger and Palmer Dabbelt}
@@ -8,6 +9,17 @@
 
 \begin{document}
 \maketitle
+
+\begin{frame}
+  \frametitle{ECDSA}
+
+  \begin{center}
+    \begin{multicols}{2}
+      \includegraphics[width=0.9\linewidth,height=0.7\textheight,keepaspectratio]{ecdsa_sign.uncrop.pdf} \\
+      \includegraphics[width=0.9\linewidth,height=0.7\textheight,keepaspectratio]{ecdsa_verify.uncrop.pdf} \\
+    \end{multicols}
+  \end{center}
+\end{frame}
 
 \begin{frame}
   \frametitle{Rocket Coprocessor Interface}
@@ -19,12 +31,30 @@
 
     \setcounter{beamerpauses}{3}
     \begin{itemize}
-      \item Software
-      \item Staticly scheduled
-      \item Dynamicly scheduled
+      \item<2-> Software
+      \item<7-> Staticly scheduled
+      \item<13-> Dynamicly scheduled
     \end{itemize}
   \end{multicols}
+\end{frame}
 
+\begin{frame}
+  \frametitle{Synthesis Results}
+
+  \begin{center}
+    \begin{vwcol}[widths={0.4,0.5}, rule=0pt]
+      \begin{tabular}{lr}
+        Cycles & $700$ \\
+        Clock & $833$ MHz \\
+        Avg Power & $21.8$ mW \\
+        Area & $0.10$ $\mathrm{mm}^2$ \\
+        Cells & 38k \\
+        Flip-Flops & 3k \\
+      \end{tabular}
+
+      \includegraphics[width=0.5\linewidth]{mod_invert.png}
+    \end{vwcol}
+  \end{center}
 \end{frame}
 
 \end{document}

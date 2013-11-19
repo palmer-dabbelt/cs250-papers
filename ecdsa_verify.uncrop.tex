@@ -11,16 +11,18 @@
 \tikzstyle{output} = [rectangle, draw, fill=green!20, 
     text width=2em, text centered, rounded corners, minimum height=2em]
 \tikzstyle{block} = [rectangle, draw, fill=blue!10, 
-    text width=3.5em, text centered, rounded corners, minimum height=3em]
+    text width=3em, text centered, rounded corners, minimum height=3em]
 \tikzstyle{speed} = [rectangle, draw, fill=blue!30, 
-    text width=3.5em, text centered, rounded corners, minimum height=3em]
+    text width=3em, text centered, rounded corners, minimum height=3em]
 
 \tikzstyle{line} = [draw, -latex']
 
+\LARGE
 \centering
 Verification
 
-\begin{tikzpicture}[node distance = 6em, auto]
+\large
+\begin{tikzpicture}[node distance = 4em, auto, font=\sffamily]
 
   \node[input] (s) {$s$};
   \node[input, left of=s] (r) {$r$};
@@ -35,8 +37,8 @@ Verification
   \node (sbrb) at ($ (sb)!0.5!(rb) $) {};
   \node (sbhb) at ($ (sb)!0.5!(hb) $) {};
 
-  \node[speed] (rw) at (sbrb) {$\times$};
-  \node[speed] (zw) at (sbhb) {$\times$};
+  \node[speed] (rw) at (sbrb) {\huge $\times$};
+  \node[speed] (zw) at (sbhb) {\huge $\times$};
   \path[line] (h) -| (zw);
   \path[line] (r) -| (rw);
   \path[line] (s) |- (rw);
@@ -47,15 +49,15 @@ Verification
   \path[line] (rw) -- (rwn);
   \path[line] (zw) -- (zwn);
 
-  \node[speed, below of=rwn] (u1g) {$*$}; \path[line] (rwn) -- (u1g);
-  \node[speed, below of=zwn] (u2g) {$*$}; \path[line] (zwn) -- (u2g);
+  \node[speed, below of=rwn] (u1g) {\huge $*$}; \path[line] (rwn) -- (u1g);
+  \node[speed, below of=zwn] (u2g) {\huge $*$}; \path[line] (zwn) -- (u2g);
   \node[input, left of=u1g] (qa) {$Q_A$}; \path[line] (qa) -- (u1g);
   \node[input, right of=u2g] (g) {$G$}; \path[line] (g) -- (u2g);
 
   \node[below of=u1g] (u1gb) {};
   \node[below of=u2g] (u2gb) {};
 
-  \node[speed] (sum) at ($ (u1gb)!0.5!(u2gb) $) {$\oplus$};
+  \node[speed] (sum) at ($ (u1gb)!0.5!(u2gb) $) {\huge $\oplus$};
   \path[line] (u1g) |- (sum);
   \path[line] (u2g) |- (sum);
 
