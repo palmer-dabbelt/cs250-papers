@@ -1,0 +1,82 @@
+\documentclass{beamer}
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{vwcol}
+
+\title{Elliptic Curve Digital Signature Algorithm}
+\author{Kevin Linger and Palmer Dabbelt}
+\date{December 13, 2013}
+
+\begin{document}
+\maketitle
+
+\begin{frame}
+  \frametitle{Public Key Cryptography}
+
+  Uses, what is a signature, etc
+\end{frame}
+
+\begin{frame}
+  \frametitle{The Discrete Logarithm Problem}
+
+  Introduce the concept of assymetric mathematics
+\end{frame}
+
+\begin{frame}
+  \frametitle{Finite Fields}
+
+  Talk about integer fields (DSA), elliptic curves (ECDSA)
+\end{frame}
+
+\begin{frame}
+  \frametitle{Elliptic Curves}
+
+  Discuss the benifits and drawbacks of ECDSA vs DSA
+\end{frame}
+
+\begin{frame}
+  \frametitle{ECDSA}
+
+  Show the full sign/verify algorithm flow charts.  Say that point
+  multiplication consumes the vast majority of the time here.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Point Multiplication}
+
+  Bring up the shift and add algorithm for point multiplication, how
+  it relates to the difficulty of EC DLP.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Modular Multiply}
+
+  Show that modmul is just a bunch of integer operations.
+\end{frame}
+
+\begin{frame}
+  \frametitle{Software Implementation(s)}
+
+  OpenSSL, my implementation
+\end{frame}
+
+\begin{frame}
+  \frametitle{Hardware Implementation}
+
+  Discuss paramaterizability
+\end{frame}
+
+\begin{frame}
+  \frametitle{Comparison}
+
+  x86/openssl, rocket/mine, rocc/point add, rocc/point mul
+\end{frame}
+
+\begin{frame}
+  \frametitle{Future Work}
+
+  Affine representation, montgomery multipliers, parallel software,
+  ...
+\end{frame}
+
+\end{document}
