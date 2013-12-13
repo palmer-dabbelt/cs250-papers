@@ -213,13 +213,32 @@ NEROR   0
 \end{frame}
 
 \begin{frame}
-  \frametitle{Comparison}
+  \frametitle{Our Rocket Coprocessor}
 
-  x86/openssl: 20 mJ/op,  1000 op/sec \\
-  x86/mine: 4000 mJ/op,  5 op/sec \\
-  rocket/mine: 800 mJ/op, 0.05 op/sec \\
-  rocc/mod: 2 mJ/op (rocket) + 0.01 mJ/op (accel), 20 op/sec \\
-  rocc/point: 0.06 mJ/op, 400 op/sec \\
+  \begin{center}
+    \begin{minipage}{0.5\linewidth}
+      \input{rocket_coproc-small.svgtex}
+    \end{minipage}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Results}
+
+  \begin{center}
+    \begin{tabular}{c|ccc}
+      Platform        & Power & Speed  & Area \\
+                      & mJ/op & op/sec & mm$^2$ \\
+      \hline
+      OpenSSL (45nm)  & 20    & 1000   &      \\
+      x86 (45 nm)     & 4000  & 5      &      \\
+      Rocket          & 800   & 0.05   &      \\
+      Virtex 2 (90nm) & 4000  & 250    &      \\
+      Virtex 6 (45nm) & 500   & 4000   &      \\
+      Mod{Mul,Div}    & 2     & 20     & 0.10 \\
+      Point Mul       & 0.06  & 400    & 0.35 \\
+    \end{tabular}
+  \end{center}
 \end{frame}
 
 \begin{frame}
