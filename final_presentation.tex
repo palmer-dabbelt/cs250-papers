@@ -69,6 +69,7 @@
     \item Difficult in one direction (given $b$ and $g$ find $k$)
     \item Easy in another direction (given $b$ and $k$ find $g$)
     \end{itemize}
+  \item At the center of many public-key crypto schemes
   \item Only asymetric for some groups
     \begin{itemize}
     \item $({\mathbb Z}_p)^\times$: Integers modulo some prime,
@@ -76,7 +77,18 @@
     \item $GF(p)$: Elliptic curves modulo some prime, repeating
       addition
     \end{itemize}
-  \item At the center of many public-key crypto schemes
+  \item Integer fields have a sub-linear algroithm
+    \begin{center}
+      \begin{tabular}{cccc}
+        Security Level & DSA & ECDSA & Ratio \\
+        \hline
+        80 & 1024 & 160 & 3:1 \\
+        112 & 2048 & 224 & 6:1 \\
+        128 & 3072 & 256 & 10:1 \\
+        192 & 7680 & 384 & 32:1 \\
+        256 & 15360 & 521 & 64:1 \\
+      \end{tabular}
+    \end{center}
   \end{itemize}
 \end{frame}
 
@@ -241,7 +253,7 @@ NEROR   0
       \hline
       Mod Mul         & 200   & 0.3    & 0.04 \\
       Mod Mul+Div     & 2     & 20     & 0.10 \\
-      Point Add       & 0.5   & 100    & 0.31 \\
+      Point Add+Dbl   & 0.5   & 100    & 0.31 \\
       Point Mul       & 0.06  & 400    & 0.35 \\
     \end{tabular}
   \end{center}
