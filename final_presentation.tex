@@ -89,7 +89,7 @@
     $ y^2 = x^3 + ax + b $
     \begin{itemize}
     \item Need a finite field $\rightarrow$ everything's modular
-    \item 
+    \item Needs to be difficult $\rightarrow$ modulo a large number
     \end{itemize}
   \item Key generation: $Q_A = d_A * G$
     \begin{itemize}
@@ -121,8 +121,8 @@
     \end{itemize}
   \item Point multiplication is defined as repeated point doubling
   \item Point doubling is defined as
-    $$ \left(\frac{(3 P_x^2 + a)}{(2 P_y)} - P_x \right)^2 * \left(\left(\frac{(3 P_x^2 + a)}{(2 P_y)}\right) \right) - P_y$$
-  \item Simplifies to 5 modular multiplies and one divide
+    $$ \left(\frac{(3 P_x^2 + a)}{(2 P_y)} - P_x \right)^2 * \left(\frac{(3 P_x^2 + a)}{(2 P_y)}\right) - P_y$$
+  \item Simplifies to 5 modular multiplies and one modular divide
     \begin{itemize}
     \item Modular operations are modulo a large (O(256-bit)) number
     \end{itemize}
