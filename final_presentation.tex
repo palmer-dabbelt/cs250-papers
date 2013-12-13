@@ -2,6 +2,7 @@
 \usepackage{graphicx}
 \usepackage{multicol}
 \usepackage{vwcol}
+\usepackage{bm}
 
 \title{Elliptic Curve Digital Signature Algorithm}
 \author{Kevin Linger and Palmer Dabbelt}
@@ -13,39 +14,108 @@
 \begin{frame}
   \frametitle{Public Key Cryptography}
 
-  Uses, what is a signature, etc
+
+  \begin{itemize}
+  \item Two keys (called a keypair)
+    \begin{itemize}
+    \item Public: the whole world can know this
+    \item Private: only the owner knows this
+    \end{itemize}
+  \item Four operations
+    \begin{itemize}
+    \item \texttt{Sign(Message, Private)} $\rightarrow$ \texttt{Signature}
+    \item \texttt{Verify(Message, Signature, Public}) $\rightarrow$ \texttt{Boolean}
+    \item \texttt{Encrypt(Message, Public)} $\rightarrow$ \texttt{Cyphertext}
+    \item \texttt{Decrypt(Cyphertext, Private}) $\rightarrow$ \texttt{Message}
+    \end{itemize}
+  \item ECDSA is a widely-used (SSH, SSL/TLS) signature algorithm
+    \begin{itemize}
+    \item Supports \texttt{Sign} and \texttt{Verify}
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Cryptography and the Swarm}
+
+  \begin{itemize}
+  \item Original motivation: the universal dataplane
+    \begin{itemize}
+      \item Large network ($10^{10}$ nodes)
+      \item Many low power sensors ($\bm{\mu} \mathbf{W}$)
+      \item Some high power servers
+    \end{itemize}
+  \item Goal: all storage is fault-tolerant
+    \begin{itemize}
+    \item Byzantine fault tolerence algorithm
+    \item Sign every message on the sensors
+    \end{itemize}
+  \item Problem: ECDSA is $\mathbf{mW}$ per signature!
+  \end{itemize}
 \end{frame}
 
 \begin{frame}
   \frametitle{The Discrete Logarithm Problem}
 
-  Introduce the concept of assymetric mathematics
+  \begin{itemize}
+  \item $b^k = g$
+    \begin{itemize}
+    \item Difficult in one direction (given $b$ and $g$ find $k$)
+    \item Easy in another direction (given $b$ and $k$ find $g$)
+    \end{itemize}
+  \item Only asymetric for some groups
+    \begin{itemize}
+    \item $({\mathbb Z}_p)^\times$: Integers modulo some prime,
+      repeating multiplication
+    \item $GF(p)$: Elliptic curves modulo some prime, repeating
+      addition
+    \end{itemize}
+  \item At the center of many public-key crypto schemes
+  \end{itemize}
 \end{frame}
 
 \begin{frame}
-  \frametitle{Finite Fields}
+  \frametitle{Integers}
 
-  Talk about integer fields (DSA), elliptic curves (ECDSA)
+  \begin{itemize}
+  \item 
+  \end{itemize}
 \end{frame}
 
 \begin{frame}
   \frametitle{Elliptic Curves}
 
   Discuss the benifits and drawbacks of ECDSA vs DSA
+  \begin{itemize}
+  \item Key generation: $Q_A = d_A * G$
+    \begin{itemize}
+    \item Given $d_A$ and $G$, $Q_A$ is easy to find
+    \item Given $Q_A$ and $G$, $d_A$ is hard to find
+    \end{itemize}
+  \end{itemize}
 \end{frame}
 
 \begin{frame}
   \frametitle{ECDSA}
 
-  Show the full sign/verify algorithm flow charts.  Say that point
-  multiplication consumes the vast majority of the time here.
+  \begin{center}
+    \begin{multicols}{2}
+      \includegraphics[width=0.9\linewidth,height=0.7\textheight,keepaspectratio]{ecdsa_sign.uncrop.pdf} \\
+      \includegraphics[width=0.9\linewidth,height=0.7\textheight,keepaspectratio]{ecdsa_verify.uncrop.pdf} \\
+    \end{multicols}
+  \end{center}
 \end{frame}
 
 \begin{frame}
   \frametitle{Point Multiplication}
 
-  Bring up the shift and add algorithm for point multiplication, how
-  it relates to the difficulty of EC DLP.
+  \begin{itemize}
+  \item ECDSA is essentially point multiply and some cleanup
+    \begin{itemize}
+    \item Point Multiply: O(million) cycles
+    \item Cleanup: O(thousand) cycles
+    \end{itemize}
+  \end{itemize}
 \end{frame}
 
 \begin{frame}
