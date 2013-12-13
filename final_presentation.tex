@@ -4,6 +4,12 @@
 \usepackage{vwcol}
 \usepackage{bm}
 
+%\usepackage{enumitem}
+%\setlistdepth{9}
+%\setitemize{label=\usebeamerfont*{itemize item}%
+%  \usebeamercolor[fg]{itemize item}
+%  \usebeamertemplate{itemize item}}
+
 \title{Elliptic Curve Digital Signature Algorithm}
 \author{Kevin Linger and Palmer Dabbelt}
 \date{December 13, 2013}
@@ -50,7 +56,7 @@
     \item Byzantine fault tolerence algorithm
     \item Sign every message on the sensors
     \end{itemize}
-  \item Problem: ECDSA is $\mathbf{mW}$ per signature!
+  \item Problem: ECDSA is $\mathbf{mJ}$ per signature!
   \end{itemize}
 \end{frame}
 
@@ -75,18 +81,16 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{Integers}
+  \frametitle{Elliptic Curve Cryptography}
+
 
   \begin{itemize}
-  \item 
-  \end{itemize}
-\end{frame}
-
-\begin{frame}
-  \frametitle{Elliptic Curves}
-
-  Discuss the benifits and drawbacks of ECDSA vs DSA
-  \begin{itemize}
+  \item Elliptic curve: the set of points that satisfy
+    $ y^2 = x^3 + ax + b $
+    \begin{itemize}
+    \item Need a finite field $\rightarrow$ everything's modular
+    \item 
+    \end{itemize}
   \item Key generation: $Q_A = d_A * G$
     \begin{itemize}
     \item Given $d_A$ and $G$, $Q_A$ is easy to find
@@ -107,7 +111,7 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{Point Multiplication}
+  \frametitle{Point Operations}
 
   \begin{itemize}
   \item ECDSA is essentially point multiply and some cleanup
@@ -115,38 +119,121 @@
     \item Point Multiply: O(million) cycles
     \item Cleanup: O(thousand) cycles
     \end{itemize}
+  \item Point multiplication is defined as repeated point doubling
+  \item Point doubling is defined as
+    $$ \left(\frac{(3 P_x^2 + a)}{(2 P_y)} - P_x \right)^2 * \left(\left(\frac{(3 P_x^2 + a)}{(2 P_y)}\right) \right) - P_y$$
+  \item Simplifies to 5 modular multiplies and one divide
+    \begin{itemize}
+    \item Modular operations are modulo a large (O(256-bit)) number
+    \end{itemize}
   \end{itemize}
 \end{frame}
 
-\begin{frame}
-  \frametitle{Modular Multiply}
+\begin{frame}[fragile]
+  \frametitle{The Design Space}
 
-  Show that modmul is just a bunch of integer operations.
+  \begin{itemize}
+  \item A whole bunch of math
+    \begin{itemize}
+    \item Data types: Points, Modular integers, and integers
+    \item Arithmatic operations: Add, Subtract, Multiply, Invert
+    \end{itemize}
+  \item Everything boils down to integer arithmetic and control logic
+    \begin{itemize}
+    \item What should be in software, what should be in hardware?
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+  \frametitle{Hardware-Software Cotuning}
+
+  \begin{itemize}
+  \item OpenSSL is the industry standard, but it's difficult to hack on
+  \item Wrote our own ECDSA implementation in C++
+  \item Generates software for a family of ECDSA accelerators
+  \end{itemize}
+
+\begin{center}
+\begin{minipage}{0.65\linewidth}
+\tiny
+\begin{verbatim}
+palmer palmer-caldesktop rocket-ecc $ time make check | tail -n0
+real    12m1.390s
+user    63m20.796s
+sys     7m37.179s
+\end{verbatim}
+\begin{verbatim}
+palmer palmer-caldesktop rocket-ecc $ ptest | tail -n4
+NRUN    6895
+NPASS   6895
+NFAIL   0
+NEROR   0
+\end{verbatim}
+\end{minipage}
+\end{center}
+
 \end{frame}
 
 \begin{frame}
-  \frametitle{Software Implementation(s)}
+  \frametitle{The (Reduced) Design Space}
 
-  OpenSSL, my implementation
-\end{frame}
+  \begin{multicols}{2}
+    \begin{minipage}{\linewidth}
+      ECDSA Sign
+      \begin{itemize}
+      \item Control logic
+      \item Point Multiplication
+        \begin{itemize}
+        \item Control logic
+        \item Modular multiply
+          \begin{itemize}
+          \item Control logic
+          \item Integer shifts, adds
+          \end{itemize}
+        \item Modular inverse
+          \begin{itemize}
+          \item Control logic
+          \item Integer shifts, adds
+          \end{itemize}
+        \end{itemize}
+      \end{itemize}
+    \end{minipage}
 
-\begin{frame}
-  \frametitle{Hardware Implementation}
-
-  Discuss paramaterizability
+    \begin{minipage}{\linewidth}
+      \begin{itemize}
+      \item Two interesting hardware configurations
+        \begin{itemize}
+        \item Point multiply hardware block
+        \item Modular multiply, inverse hardware blocks
+        \end{itemize}
+      \end{itemize}
+    \end{minipage}
+  \end{multicols}
 \end{frame}
 
 \begin{frame}
   \frametitle{Comparison}
 
-  x86/openssl, rocket/mine, rocc/point add, rocc/point mul
+  x86/openssl: 20 mJ/op,  1000 op/sec \\
+  x86/mine: 4000 mJ/op,  5 op/sec \\
+  rocket/mine: 800 mJ/op, 0.05 op/sec \\
+  rocc/mod: 2 mJ/op (rocket) + 0.01 mJ/op (accel), 20 op/sec \\
+  rocc/point: 0.06 mJ/op, 400 op/sec \\
 \end{frame}
 
 \begin{frame}
   \frametitle{Future Work}
 
-  Affine representation, montgomery multipliers, parallel software,
-  ...
+  \begin{itemize}
+  \item Time-space tradeoffs
+    \begin{itemize}
+    \item Montgomery multipliers
+    \item Projective point representation
+    \end{itemize}
+  \item Parallel software, multiple signatures in flight
+  \item Hard-coded curve parameters
+  \end{itemize}
 \end{frame}
 
 \end{document}
