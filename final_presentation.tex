@@ -91,11 +91,10 @@
     \item Need a finite field $\rightarrow$ everything's modular
     \item Needs to be difficult $\rightarrow$ modulo a large number
     \end{itemize}
-  \item Key generation: $Q_A = d_A * G$
-    \begin{itemize}
-    \item Given $d_A$ and $G$, $Q_A$ is easy to find
-    \item Given $Q_A$ and $G$, $d_A$ is hard to find
-    \end{itemize}
+  \item Add and multiply defined to satsify a field
+    \begin{center}
+      \includegraphics[width=0.6\linewidth]{point_add.png}
+    \end{center}
   \end{itemize}
 \end{frame}
 
@@ -142,6 +141,10 @@
     \begin{itemize}
     \item What should be in software, what should be in hardware?
     \end{itemize}
+  \item Unfortunately, it's too big!
+    \begin{itemize}
+    \item $2^{12}$ software configurations!
+    \end{itemize}
   \end{itemize}
 \end{frame}
 
@@ -180,10 +183,10 @@ NEROR   0
 
   \begin{multicols}{2}
     \begin{minipage}{\linewidth}
-      ECDSA Sign
+      Point Multiplication
       \begin{itemize}
       \item Control logic
-      \item Point Multiplication
+      \item Point Addition
         \begin{itemize}
         \item Control logic
         \item Modular multiply
@@ -235,7 +238,10 @@ NEROR   0
       Rocket          & 800   & 0.05   &      \\
       Virtex 2 (90nm) & 4000  & 250    &      \\
       Virtex 6 (45nm) & 500   & 4000   &      \\
-      Mod{Mul,Div}    & 2     & 20     & 0.10 \\
+      \hline
+      Mod Mul         & 200   & 0.3    & 0.04 \\
+      Mod Mul+Div     & 2     & 20     & 0.10 \\
+      Point Add       & 0.5   & 100    & 0.31 \\
       Point Mul       & 0.06  & 400    & 0.35 \\
     \end{tabular}
   \end{center}
@@ -252,6 +258,7 @@ NEROR   0
     \end{itemize}
   \item Parallel software, multiple signatures in flight
   \item Hard-coded curve parameters
+  \item 300MHz clock
   \end{itemize}
 \end{frame}
 
