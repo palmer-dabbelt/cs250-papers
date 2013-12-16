@@ -1,0 +1,156 @@
+\documentclass[twocolumn]{article}
+\usepackage{fullpage}
+\usepackage{hyperref}
+
+\title{CS250: An Elliptic Curve Cryptography Engine}
+\author{Palmer Dabbelt and Kevin Linger}
+\date{December 18, 2013}
+
+\begin{document}
+\maketitle
+
+For our CS250 project, we implemented an elliptic curve cryptagraphy
+engine that attaches via the Rocket coprocessor interface.  Our
+accelerator was targeted at supporting the elliptic curve digital
+signature algorithm (ECDSA), a NIST standard widely used on the
+Internet for digital signatures.  We will build off previous work by
+doing a more involved design-space exploration, focusing on
+hardware/software co-tuning.
+
+\section{The Swarm}
+
+FIXME: If we need to fill space I can stick in some blurb about
+swarmos here
+
+\section{Elliptic Curve Cryptography}
+
+Digital signature algorithms\cite{fips-186-3} are a widely used class
+of algorithms that are central to the functioning of the modern
+Internet.  DSA\cite{us-dsa} (the original digital signature algorithm
+as standardized by NIST) is a specialization of the ElGamal signature
+scheme\cite{elgamal-sig} that uses discrete logarithms over finite
+integer fields.  Finite integer fields are particularly easy to
+compute with electronics, so this gives DSA the advantage of being an
+efficient signature algorithm.
+
+The problem is that the discrete logarithm problem is not particularly
+strong over finite integer fields (specifically, there are known
+sub-exponential algorithms\cite{adleman-subexp}).  As shown in
+Table~\ref{key-sizes}, DSA does not scale well to higher security
+levels.  This is important because code breaking algorithms are
+getting more efficient, leading to the need for higher security
+levels, therefore imposing higher computational costs on every node in
+the system. 
+
+\begin{table}[h]
+  \begin{center}
+    \begin{tabular}{cccc}
+      Security Level & DSA & ECDSA & Ratio \\
+      \hline
+      80 & 1024 & 160 & 3:1 \\
+      112 & 2048 & 224 & 6:1 \\
+      128 & 3072 & 256 & 10:1 \\
+      192 & 7680 & 384 & 32:1 \\
+      256 & 15360 & 521 & 64:1 \\
+    \end{tabular}
+  \end{center}
+
+  \caption{Comparison of DSA and ECDSA\cite{nsa-case_for_ecc}
+    \label{key-sizes}}
+\end{table}
+
+The commonly accepted solution to this problem is to change the field
+from integers to elliptic curves, which (as shown in
+Table~\ref{key-sizes}) scale much better to higher security levels.
+While elliptic curves are significantly more difficult to build
+electronics for, this will eventually be offset by sheer key size
+alone.  The currently accepted security level is 128 bits, at which
+ECDSA already has a 10:1 advantage in key size.  Shortening the key 
+size becomes even more important, as we approach a world in which 
+ubiquitous embedded systems must be able to securely transmit and 
+receive data.
+
+In addition to providing for faster cryptographic operations, this
+shortened key size plays an important role specific to the swarm
+related to key generation.  It is already known\cite{halderman-shared}
+that we can't find sufficient entropy to generate RSA-style keys for
+the machines we have, much less for a network the size of that
+enviosned by the swarm project.  The main problem with generating RSA
+keys is finding enough entropy to search for large prime numbers, a
+problem that goes away with ECDSA because the numbers are smaller and
+there's no necessity for them to be prime (there is an acceptability
+criteria, but the chances of a random number not meeting it are
+exceedingly low).
+
+\section{Implementing ECDSA}
+
+Unlike finite integer fields, elliptic curves do not map directly to
+the hardware present in current microprocessors\cite{kss-ecdsa}. This
+suggests that a hardware accelerator designed to compute over elliptic
+curves should lead to a significantly more efficient implementation
+than in software alone.  ECDSA requires more computation per bit than
+DSA, so a hardware accelerator is necessary to fully take advantage of
+the smaller key size.
+
+Previous projects\cite{nnll-ecdsa_hw} have shown that ECC hardware can
+be implemented efficiently, but were limited in the amount of
+design-space exploration that was attempted.  \cite{mmm-hw_ecc}
+explored the tradeoffs of different algorithms for computation, but
+did not explore the design space of any particular algorithm, which
+seems to be the extent of the design space exploration performed.  In
+addition, the current state of the art appears to consist solely of
+FPGA implementations.  Unfortunately these studies don't present power
+numbers, which is problematic because energy is the main limiting
+factor for swarm applications.
+
+FIXME: Here's where we should describe the computational patterns of
+ECDSA, use those flow charts.
+
+\section{ASIC Implementation}
+
+FIXME: Discuss the coprocessor interface, why it's built the way we
+did (ie, no memory).  What else?
+
+\section{Benchmarking Methodology}
+
+FIXME: Here's where I'll introduce the software shim that we wrote,
+and discuss why we're comparing with OpenSSL on x86.
+
+\section{Results}
+
+Possibly some floorplans here?
+
+\begin{table}[ht]
+  \begin{center}
+    \begin{tabular}{c|ccc}
+      Platform        & Power & Speed  & Area \\
+                      & mJ/op & op/sec & mm$^2$ \\
+      \hline
+      OpenSSL (45nm)  & 20    & 1000   &      \\
+      x86 (45 nm)     & 4000  & 5      &      \\
+      Rocket          & 800   & 0.05   &      \\
+      Virtex 2 (90nm) & 4000  & 250    &      \\
+      Virtex 6 (45nm) & 500   & 4000   &      \\
+      \hline
+      Mod Mul         & 200   & 0.3    & 0.04 \\
+      Mod Mul+Div     & 2     & 20     & 0.10 \\
+      Point Add+Dbl   & 0.5   & 100    & 0.31 \\
+      Point Mul       & 0.06  & 400    & 0.35 \\
+    \end{tabular}
+  \end{center}
+
+  \caption{Comparision of results to previous work
+    \label{results}}
+\end{table}
+
+FIXME: What to say here?
+
+\section{Future Work}
+
+FIXME: Functional unit sizes, algorithmic improvements, hard-coded
+curve parameters, parallel software, faster clock
+
+\bibliographystyle{plain}
+\bibliography{bibliography}
+
+\end{document}
