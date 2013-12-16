@@ -111,14 +111,64 @@ ECDSA, use those flow charts.
 FIXME: Discuss the coprocessor interface, why it's built the way we
 did (ie, no memory).  What else?
 
-\section{Benchmarking Methodology}
+\section{Software Test Bench}
 
-FIXME: Here's where I'll introduce the software shim that we wrote,
-and discuss why we're comparing with OpenSSL on x86.
+The primary goal of this project was to explore the tradeoffs involved
+in adding different amounts of hardware support for ECDSA to a
+pre-existing chip.  In order to achieve this, we needed to have the
+ability to generate a myriad of different software configurations that
+coorespond to each of the accelerator instances we generated.
+
+The current industry standard cryptographic software, OpenSSL, is very
+difficult to hack on.  Instead of messing around with OpenSSL, we
+decided to instead write our own implementation of ECDSA with the
+explicit goal of being paramaterizable.  We could then generate an
+instance of this software that cooresponds with every accelerator
+configuration that made sense and fully test our hardware.
+
+Unfortunately, this software implementation proved to be the weakest
+point of this entire project.  As shown in Figure~\ref{results}, our
+code is hundreds of times slower than OpenSSL -- this is after a
+significant amount of tuning, our first implementations were hundreds
+of thousands of times slower than OpenSSL!  This trouble can be
+attributed to two shortcommings: algorithms and tuning.
+
+OpenSSL uses a number of significantly more complicated cryptographic
+operations that our code does.  Specifically, it uses a projective
+point representation that allows for the conversion of a large number
+of modular multiplications into regular integer multiplications
+(FIXME: is that what projective does? I forget...).  Implementing
+these algorithmic improvements should show significant speedups for
+both our software and hardware, so it's not entirely a bad thing.  We
+estimate about a $20\times$ gain can be had from algorithmic
+improvements alone!
+
+In addition to using better algorithms, OpenSSL is implemented better
+than our software was.  Specifically, OpenSSL contains hand-tuned
+assembly for a number of critical paths that compilers appear to
+generate bad code for (I'm specifically thinking of carry chains for
+big integer operations).  Part of the problem that our implementation
+had was probably related to the fact that it attempts to be
+paramaterizable, which almost certainly defeats a lot of compiler
+hueristics (I'd love a way to tell a compiler to generate 4 different
+optimized versions of a function, sweeping arcoss the 4 different
+values that one particularly interesting input can have).
+
+Despite these shortcomings, I don't believe that the software troubles
+completely invalidate the results from this project.  We spent about
+the same amount of time on both the software and hardware, which
+appears fair to me.  More importantly, we have numbers comparing
+against the full-strength OpenSSL code running on x86 (a platform that
+OpenSSL is highly optimized for\cite{kasper-openssl_ecc}).  These
+numbers are probably the most reasonable to compare our ASIC
+implementation against, as they're the most realistic picture of the
+current state of the art.
 
 \section{Results}
 
-Possibly some floorplans here?
+FIXME: Possibly some floorplans here?
+
+FIXME: Some discussion of how the various numbers came to exist... :)
 
 \begin{table}[ht]
   \begin{center}
@@ -143,12 +193,56 @@ Possibly some floorplans here?
     \label{results}}
 \end{table}
 
-FIXME: What to say here?
+FIXME: What to say here?  Maybe a graph of those area/power numbers?
 
 \section{Future Work}
 
-FIXME: Functional unit sizes, algorithmic improvements, hard-coded
-curve parameters, parallel software, faster clock
+The first order of business should probably be getting our software
+implementation up to snuff -- this almost certainly means adopting
+OpenSSL as our testbench, hand-tuning its assembly for RISC-V, and
+then modifying it to be easily paramaterizable so it can target our
+family of accelerators.
+
+We will then have to modify our hardware implementation to take into
+account the improvements that OpenSSL brings.  There are two important
+algorithmic improvements that need to be made: using a projective
+representation and implementing montgomery multipliers.  Both of these
+have interesting time/space tradeoffs for hardware implementations, so
+could serve as additional design points for our accelerator.
+
+In addition to algorithmic improvements, there are a number of tricks
+one can play to squeeze performance out of ECDSA.  The most important
+one appears to be to build hand-crafted routines for operating on
+particular curves -- for example, a mod routine for NIST's $p256$
+curve is hundredes of times faster than a generic
+one\cite{nist-routines}.
+
+There are a number of architectural improvements that can be made to
+our coprocessor interface that can help mitigate the large overhead
+involved -- either placing the accelerator closer to the pipeline or
+moving more state into the accelerator.  Both of these lower the
+round-trip CPU to accelerator overhead and make some smaller
+accelerators possible, thus providing more interesting design points.
+
+There are also a number of interesting micro-architectural
+improvements that can be made to our accelerator.  We only have a
+300MHz clock, which seems exceedingly slow for what should be a
+critical path of a single 256-bt adder.  Almost certainly what
+happened was that there are actually two adders on the critical path,
+as there are cases where one step of an algorithm requires two
+additions back-to-back.  Tweaking these state machines should provide
+an interesting trade-off between speed and power usage: essentially
+the higher clock rate will keep more transistors toggling, they just
+won't all be doing useful work.
+
+There are also a number of benchmarking improvements that would be
+interesting to see done.  Specifically, it would be good to see a
+full-system benchmark running with our accelerator attached.  This
+would be particularly interesting because it would allow for some
+degree of parallelism to be exposed by our accelerator to the
+benchmark.  This could be very interesting because we may be able to
+provide light-weight accelerator contexts (compared to POSIX threads),
+which could result in an interesting userspace wrapper.
 
 \bibliographystyle{plain}
 \bibliography{bibliography}
