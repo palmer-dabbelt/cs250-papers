@@ -21,6 +21,7 @@ hardware/software co-tuning.
 
 FIXME: If we need to fill space I can stick in some blurb about
 swarmos here
+(I'm sure we will have more than plenty of space to fill)
 
 \section{Elliptic Curve Cryptography}
 
@@ -83,6 +84,7 @@ criteria, but the chances of a random number not meeting it are
 exceedingly low).
 
 \section{Introduction to Elliptic Curve Arithmetic}
+
 FIXME: We should do a brief intro on what point multiplication is.
 
 \section{Implementing ECDSA}
@@ -135,9 +137,10 @@ add, a comparision, and potentially a subtraction. The modular multiplication th
 also consists of repeated addition and shifting instead of a large multiply followed
 by repeated subtraction of the modulus. The paths with the largest propogation delay
 have full adder cells, and it is likely due to this add->check->subtract with 
-256-bit fields, which is used numerous times throughout our functional units. It 
-is not obvious how to best pipeline this due to the nature of the design, as there would
-be a tremendous cost in pipeline registsrs, but should be explored in the future. 
+256-bit fields, which is used numerous times throughout our functional units. This 
+limits our clock period to 3.5 ns. It is not obvious how to best pipeline this due 
+to the nature of the design, as there would be a tremendous cost in pipeline registsrs, 
+but it should be explored in the future. 
 
 Currently, we only have a simulated version of the rocket interface working correctly. 
 We have not been able to get the compilation of our interface with the rocket to correctly
@@ -182,6 +185,22 @@ FIXME: What to say here?
 
 FIXME: Functional unit sizes, algorithmic improvements, hard-coded
 curve parameters, parallel software, faster clock
+
+Due to time constraints, there are many useful improvements that could be made
+to our accelerator. Elliptic field arthimetic is not an easy concept to grasp, and
+we had to make due with using only basic algorithms. One improvement that could be made
+on the ellipic field arthimetic is transforming a two-dimensional point into a three-dimensional
+represenation for point multiplication. In this case, only one modular inversion is needed
+for the entire point multiplication (as opposed to hundreds). This further might make it 
+unnecessary for an inversion hardware unit to be needed at all. Another improvement is to use
+a Montgomery Multiplication (cite?). This is a complex algorithm that performs successive 
+multiplications fast after some intial overhead. If these algorithmic enhancements were made we
+would surely see a tremendous speedup.
+
+As stated above, we are limited to a 300 MHz clock. This along with our naive algorithm implementation 
+does not yield a significant improvement over the most finely-tuned software implementation. Pipelining 
+is not trivial as discussed earlier, but we suspect it would drastically increase our clock frequency. 
+
 
 
 
