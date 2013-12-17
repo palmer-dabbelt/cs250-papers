@@ -13,7 +13,7 @@ For our CS250 project, we implemented an elliptic curve cryptagraphy
 engine that attaches via the Rocket coprocessor interface.  Our
 accelerator was targeted at supporting the elliptic curve digital
 signature algorithm (ECDSA), a NIST standard widely used on the
-Internet for digital signatures.  We will build off previous work by
+Internet for digital signatures.  We built off of previous work by
 doing a more involved design-space exploration, focusing on
 hardware/software co-tuning.
 
@@ -21,7 +21,7 @@ hardware/software co-tuning.
 
 FIXME: If we need to fill space I can stick in some blurb about
 swarmos here
-(I'm sure we will have more than plenty of space to fill)
+(I'm sure we will have more than plenty of space to fill, so go ahead)
 
 \section{Elliptic Curve Cryptography}
 
@@ -96,13 +96,20 @@ of the double operation is that intersection point reflected over the X-axis.
 The add and double operations are defined algebraically by the following equations:
 
 - Add equation
+
 - Double equation
+
+Each of these operations also has a modular operation at the end, where the modulus is a 
+large prime number that represents the order of the EC. This makes multiplication and division
+much more difficult. A division is now a modular inverse followed by a modular multiplication. 
 
 The discrete logarithm problem of ECDSA comes from being able to share a generator point
 G of an elliptic curve, and the result point R of a point multiplication G*d = R 
 (where d is an integer). Given only R and G, it is not easy to solve for d. To find d, an
 outsider with have to add G to itself until the result matched the output R. The number
-of additions grows exponentially with the key size.
+of additions grows exponentially with the key size. The multiplier d is the private key, 
+and verification of the point multiplication can now be done in logarithmic time because
+the number of point doubling operations is known. 
 
 \section{Implementing ECDSA}
 
@@ -136,7 +143,7 @@ did (ie, no memory).  What else?
 Our ASIC implementation of ECDSA performs all elliptic field arithmetic,
 including point multiplication, addition, doubling, as well as modular
 multiplication and modular inversion. Our hardware supports key sizes
-up to 256 bits. 
+up to 256 bits, as that is the suggested security level.
 
 We created instructions to expose each of the operations listed above. Operands
 are pushed 64-bits at a time. We opted to have operands pushed over the two 64-bit
@@ -146,16 +153,17 @@ four to twelve instructions to push all operands to the accelerator. In addition
 setting the operands, the elliptic curve parameters must also be sent. This is 256 bits
 for the modulus of the curve, and 256 bits for the "a" parameter of the curve, which
 is needed for the point doubling operation. Once a curve is set, it will most likely
-be used many times (correct?), so this extra overhead is also negligible. 
+be used many times (correct?), so this extra overhead of four instructions is also 
+negligible. 
 
 One of the biggest challenges in hardware was making sure that the result of each 
 operation did not exceed the modulus. This means that on each addition becomes an 
 add, a comparision, and potentially a subtraction. The modular multiplication then 
 also consists of repeated addition and shifting instead of a large multiply followed
 by repeated subtraction of the modulus. The paths with the largest propogation delay
-have full adder cells, and it is likely due to this add->check->subtract with 
-256-bit fields, which is used numerous times throughout our functional units. This 
-limits our clock period to 3.5 ns. It is not obvious how to best pipeline this due 
+have full adder cells, and it is likely due to the add-check-subtract operation with 
+256-bit fields, which is used numerous times throughout the functional units. This 
+limits the clock period to 3.5 ns. It is not obvious how to best pipeline this due 
 to the nature of the design, as there would be a tremendous cost in pipeline registsrs, 
 but it should be explored in the future. 
 
@@ -200,8 +208,8 @@ FIXME: What to say here?
 
 \section{Future Work}
 
-FIXME: Functional unit sizes, algorithmic improvements, hard-coded
-curve parameters, parallel software, faster clock
+FIXME: Functional unit sizes, hard-coded
+curve parameters, parallel software
 
 Due to time constraints, there are many useful improvements that could be made
 to our accelerator. Elliptic field arthimetic is not an easy concept to grasp, and
