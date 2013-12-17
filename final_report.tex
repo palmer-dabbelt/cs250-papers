@@ -87,6 +87,23 @@ exceedingly low).
 
 FIXME: We should do a brief intro on what point multiplication is.
 
+The computate-intensive operation in ECDSA is an elliptic curve (EC) point 
+multiplication. An EC multiply is a series of EC doubles and additions, which
+are much different than the respective integer operations. These operations
+are defined geometrically; e.g. to double a point on an EC, a tangent line at that
+point is drawn which will intersect the curve at exactly one other point. The result 
+of the double operation is that intersection point reflected over the X-axis.
+The add and double operations are defined algebraically by the following equations:
+
+- Add equation
+- Double equation
+
+The discrete logarithm problem of ECDSA comes from being able to share a generator point
+G of an elliptic curve, and the result point R of a point multiplication G*d = R 
+(where d is an integer). Given only R and G, it is not easy to solve for d. To find d, an
+outsider with have to add G to itself until the result matched the output R. The number
+of additions grows exponentially with the key size.
+
 \section{Implementing ECDSA}
 
 Unlike finite integer fields, elliptic curves do not map directly to
