@@ -82,6 +82,9 @@ there's no necessity for them to be prime (there is an acceptability
 criteria, but the chances of a random number not meeting it are
 exceedingly low).
 
+\section{Introduction to Elliptic Curve Arithmetic}
+FIXME: We should do a brief intro on what point multiplication is.
+
 \section{Implementing ECDSA}
 
 Unlike finite integer fields, elliptic curves do not map directly to
@@ -111,6 +114,35 @@ ECDSA, use those flow charts.
 FIXME: Discuss the coprocessor interface, why it's built the way we
 did (ie, no memory).  What else?
 
+Our ASIC implementation of ECDSA performs all elliptic field arithmetic,
+including point multiplication, addition, doubling, as well as modular
+multiplication and modular inversion. Our hardware supports key sizes
+up to 256 bits. 
+
+We created instructions to expose each of the operations listed above. Operands
+are pushed 64-bits at a time. We opted to have operands pushed over the two 64-bit
+buses instead of having the accelerator fetch operands from memory. This primarily 
+comes at the cost of register space in the rocket core (correct?), as it only takes 
+four to twelve instructions to push all operands to the accelerator. In addition to 
+setting the operands, the elliptic curve parameters must also be sent. This is 256 bits
+for the modulus of the curve, and 256 bits for the "a" parameter of the curve, which
+is needed for the point doubling operation. Once a curve is set, it will most likely
+be used many times (correct?), so this extra overhead is also negligible. 
+
+One of the biggest challenges in hardware was making sure that the result of each 
+operation did not exceed the modulus. This means that on each addition becomes an 
+add, a comparision, and potentially a subtraction. The modular multiplication then 
+also consists of repeated addition and shifting instead of a large multiply followed
+by repeated subtraction of the modulus. The paths with the largest propogation delay
+have full adder cells, and it is likely due to this add->check->subtract with 
+256-bit fields, which is used numerous times throughout our functional units. It 
+is not obvious how to best pipeline this due to the nature of the design, as there would
+be a tremendous cost in pipeline registsrs, but should be explored in the future. 
+
+Currently, we only have a simulated version of the rocket interface working correctly. 
+We have not been able to get the compilation of our interface with the rocket to correctly
+compile into Verilog code. 
+
 \section{Benchmarking Methodology}
 
 FIXME: Here's where I'll introduce the software shim that we wrote,
@@ -119,6 +151,7 @@ and discuss why we're comparing with OpenSSL on x86.
 \section{Results}
 
 Possibly some floorplans here?
+(I'll see if I can get anything that looks interesting)
 
 \begin{table}[ht]
   \begin{center}
@@ -149,6 +182,13 @@ FIXME: What to say here?
 
 FIXME: Functional unit sizes, algorithmic improvements, hard-coded
 curve parameters, parallel software, faster clock
+
+
+
+\section{Course Feedback}
+
+FIXME: I don't know much to say about the course... More instruction on how to use Chisel
+and better Chisel tutorials were my main concerns.
 
 \bibliographystyle{plain}
 \bibliography{bibliography}
