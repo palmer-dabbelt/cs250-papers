@@ -13,7 +13,7 @@ For our CS250 project, we implemented an elliptic curve cryptagraphy
 engine that attaches via the Rocket coprocessor interface.  Our
 accelerator was targeted at supporting the elliptic curve digital
 signature algorithm (ECDSA), a NIST standard widely used on the
-Internet for digital signatures.  We will build off previous work by
+Internet for digital signatures.  We built off of previous work by
 doing a more involved design-space exploration, focusing on
 hardware/software co-tuning.
 
@@ -21,6 +21,7 @@ hardware/software co-tuning.
 
 FIXME: If we need to fill space I can stick in some blurb about
 swarmos here
+(I'm sure we will have more than plenty of space to fill, so go ahead)
 
 \section{Elliptic Curve Cryptography}
 
@@ -81,6 +82,34 @@ problem that goes away with ECDSA because the numbers are smaller and
 there's no necessity for them to be prime (there is an acceptability
 criteria, but the chances of a random number not meeting it are
 exceedingly low).
+
+\section{Introduction to Elliptic Curve Arithmetic}
+
+FIXME: We should do a brief intro on what point multiplication is.
+
+The computate-intensive operation in ECDSA is an elliptic curve (EC) point 
+multiplication. An EC multiply is a series of EC doubles and additions, which
+are much different than the respective integer operations. These operations
+are defined geometrically; e.g. to double a point on an EC, a tangent line at that
+point is drawn which will intersect the curve at exactly one other point. The result 
+of the double operation is that intersection point reflected over the X-axis.
+The add and double operations are defined algebraically by the following equations:
+
+- Add equation
+
+- Double equation
+
+Each of these operations also has a modular operation at the end, where the modulus is a 
+large prime number that represents the order of the EC. This makes multiplication and division
+much more difficult. A division is now a modular inverse followed by a modular multiplication. 
+
+The discrete logarithm problem of ECDSA comes from being able to share a generator point
+G of an elliptic curve, and the result point R of a point multiplication G*d = R 
+(where d is an integer). Given only R and G, it is not easy to solve for d. To find d, an
+outsider with have to add G to itself until the result matched the output R. The number
+of additions grows exponentially with the key size. The multiplier d is the private key, 
+and verification of the point multiplication can now be done in logarithmic time because
+the number of point doubling operations is known. 
 
 \section{Implementing ECDSA}
 
@@ -170,6 +199,47 @@ FIXME: Possibly some floorplans here?
 
 FIXME: Some discussion of how the various numbers came to exist... :)
 
+Our ASIC implementation of ECDSA performs all elliptic field arithmetic,
+including point multiplication, addition, doubling, as well as modular
+multiplication and modular inversion. Our hardware supports key sizes
+up to 256 bits, as that is the suggested security level.
+
+We created instructions to expose each of the operations listed above. Operands
+are pushed 64-bits at a time. We opted to have operands pushed over the two 64-bit
+buses instead of having the accelerator fetch operands from memory. This primarily 
+comes at the cost of register space in the rocket core (correct?), as it only takes 
+four to twelve instructions to push all operands to the accelerator. In addition to 
+setting the operands, the elliptic curve parameters must also be sent. This is 256 bits
+for the modulus of the curve, and 256 bits for the "a" parameter of the curve, which
+is needed for the point doubling operation. Once a curve is set, it will most likely
+be used many times (correct?), so this extra overhead of four instructions is also 
+negligible. 
+
+One of the biggest challenges in hardware was making sure that the result of each 
+operation did not exceed the modulus. This means that on each addition becomes an 
+add, a comparision, and potentially a subtraction. The modular multiplication then 
+also consists of repeated addition and shifting instead of a large multiply followed
+by repeated subtraction of the modulus. The paths with the largest propogation delay
+have full adder cells, and it is likely due to the add-check-subtract operation with 
+256-bit fields, which is used numerous times throughout the functional units. This 
+limits the clock period to 3.5 ns. It is not obvious how to best pipeline this due 
+to the nature of the design, as there would be a tremendous cost in pipeline registsrs, 
+but it should be explored in the future. 
+
+Currently, we only have a simulated version of the rocket interface working correctly. 
+We have not been able to get the compilation of our interface with the rocket to correctly
+compile into Verilog code. 
+
+\section{Benchmarking Methodology}
+
+FIXME: Here's where I'll introduce the software shim that we wrote,
+and discuss why we're comparing with OpenSSL on x86.
+
+\section{Results}
+
+Possibly some floorplans here?
+(I'll see if I can get anything that looks interesting)
+
 \begin{table}[ht]
   \begin{center}
     \begin{tabular}{c|ccc}
@@ -243,6 +313,32 @@ degree of parallelism to be exposed by our accelerator to the
 benchmark.  This could be very interesting because we may be able to
 provide light-weight accelerator contexts (compared to POSIX threads),
 which could result in an interesting userspace wrapper.
+
+FIXME: Functional unit sizes, hard-coded
+curve parameters, parallel software
+
+Due to time constraints, there are many useful improvements that could be made
+to our accelerator. Elliptic field arthimetic is not an easy concept to grasp, and
+we had to make due with using only basic algorithms. One improvement that could be made
+on the ellipic field arthimetic is transforming a two-dimensional point into a three-dimensional
+represenation for point multiplication. In this case, only one modular inversion is needed
+for the entire point multiplication (as opposed to hundreds). This further might make it 
+unnecessary for an inversion hardware unit to be needed at all. Another improvement is to use
+a Montgomery Multiplication (cite?). This is a complex algorithm that performs successive 
+multiplications fast after some intial overhead. If these algorithmic enhancements were made we
+would surely see a tremendous speedup.
+
+As stated above, we are limited to a 300 MHz clock. This along with our naive algorithm implementation 
+does not yield a significant improvement over the most finely-tuned software implementation. Pipelining 
+is not trivial as discussed earlier, but we suspect it would drastically increase our clock frequency. 
+
+
+
+
+\section{Course Feedback}
+
+FIXME: I don't know much to say about the course... More instruction on how to use Chisel
+and better Chisel tutorials were my main concerns.
 
 \bibliographystyle{plain}
 \bibliography{bibliography}
