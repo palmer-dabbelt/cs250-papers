@@ -1,5 +1,6 @@
 \documentclass[twocolumn]{article}
 \usepackage{fullpage}
+\usepackage{graphicx}
 \usepackage{hyperref}
 
 \title{CS250: An Elliptic Curve Cryptography Engine}
@@ -16,12 +17,6 @@ signature algorithm (ECDSA), a NIST standard widely used on the
 Internet for digital signatures.  We built off of previous work by
 doing a more involved design-space exploration, focusing on
 hardware/software co-tuning.
-
-\section{The Swarm}
-
-FIXME: If we need to fill space I can stick in some blurb about
-swarmos here
-(I'm sure we will have more than plenty of space to fill, so go ahead)
 
 \section{Elliptic Curve Cryptography}
 
@@ -83,33 +78,122 @@ there's no necessity for them to be prime (there is an acceptability
 criteria, but the chances of a random number not meeting it are
 exceedingly low).
 
-\section{Introduction to Elliptic Curve Arithmetic}
+\section{The Swarm}
 
-FIXME: We should do a brief intro on what point multiplication is.
+One particularly interesting application of public-key cryptograhpy
+arose as part of the SwarmOS project, which was the original
+motivation for this accelerator.  The SwarmOS is designed to be an
+operating system for the swarm, which consists of a large number
+($10^{10}$) of low-powered ($\mu$W) devices as well as a smaller
+number of more powerful servers.
 
-The computate-intensive operation in ECDSA is an elliptic curve (EC) point 
-multiplication. An EC multiply is a series of EC doubles and additions, which
-are much different than the respective integer operations. These operations
-are defined geometrically; e.g. to double a point on an EC, a tangent line at that
-point is drawn which will intersect the curve at exactly one other point. The result 
-of the double operation is that intersection point reflected over the X-axis.
-The add and double operations are defined algebraically by the following equations:
+One component of the SwarmOS is the Universal Dataplane, which is
+designed to serve as a combined communication and storage mechanism
+for swarm devices.  The general idea is that data will be put into the
+dataplane in one place by sensors, and can then be removed anywhere
+else in the world by users.  This involves a significant amount of
+data being between untrusted servers, and as such the stance we
+decided to take was to sign and encrypt all data all the time.
 
-- Add equation
+Unfortunately, ECDSA requires a significant amount of energy to
+perform each signature operation (encryption is less scary because you
+can cheat a bit like PGP does) -- software ECDSA is mJ per signature,
+which leads to very low bandwidth on a $\mu$W machine.  The only way
+to get the required $1000\times$ energy per operation improvement is
+to implement ECDSA in hardware, which is essentially what this project
+is.
 
-- Double equation
+\section{Elliptic Curve Arithmetic}
 
-Each of these operations also has a modular operation at the end, where the modulus is a 
-large prime number that represents the order of the EC. This makes multiplication and division
-much more difficult. A division is now a modular inverse followed by a modular multiplication. 
+The computate-intensive operation in ECDSA is an elliptic curve (EC)
+point multiplication. An EC multiply is a series of EC doubles and
+additions, which are much different than the respective integer
+operations. These operations are defined geometrically; e.g. to double
+a point on an EC, a tangent line at that point is drawn which will
+intersect the curve at exactly one other point. The result of the
+double operation is that intersection point reflected over the X-axis.
+The point add operation is described by the equation shown in
+Figure~\ref{point-add-eq}, and the point double operation is described
+by the equation shown in Figure~\ref{point-dub-eq}.  In these
+equations all operations are modulo the order of the curve, which is
+the same order of magnitune of the prime modulus of the curve (but
+it's a different number).  Additionally, the curve constant $a$ is as
+defined by NIST (and not by Wikipedia).
 
-The discrete logarithm problem of ECDSA comes from being able to share a generator point
-G of an elliptic curve, and the result point R of a point multiplication G*d = R 
-(where d is an integer). Given only R and G, it is not easy to solve for d. To find d, an
-outsider with have to add G to itself until the result matched the output R. The number
-of additions grows exponentially with the key size. The multiplier d is the private key, 
-and verification of the point multiplication can now be done in logarithmic time because
-the number of point doubling operations is known. 
+\begin{figure}[ht]
+  $$ \lambda = \frac{P_y - Q_y}{P_x - Q_x} $$
+  $$ R_x = \lambda^2 - P_x - Q_x $$
+  $$ R_y = \lambda(P_x - R_x) - P_y $$
+
+  \caption{Point addition formula
+    \label{point-add-eq}}
+\end{figure}
+
+\begin{figure}[ht]
+  $$ \lambda = \frac{3 * P_x^2 + a}{2P_y} $$
+  $$ R_x = \lambda^2 - P_x - Q_x $$
+  $$ R_y = \lambda(P_x - R_x) - P_y $$
+
+  \caption{Point addition formula
+    \label{point-dub-eq}}
+\end{figure}
+
+Each of these operations also has a modular operation at the end,
+where the modulus is a large prime number that represents the order of
+the curve. This makes multiplication and division much more difficult:
+in an accelerator where an addition takes two cycles, a modular
+multiply will take on the order of a thousand cycles\cite{kss-ecdsa}.
+A division is now a modular inverse followed by a modular
+multiplication.
+
+It is possiblet formulate the discrete logarithmic problem over
+ellitic curves by repeating multiplication as described above.  Under
+standard hardness assumptions, this formulation of the discrete
+logarithm problem is assymetric (actually, I think this is one of the
+standard hardness assumptions).  As far as I know it hasn't been
+proven, but the general idea is simple: point multiplication is
+defined as repeated addition.  Without point doubling, for an $N$-bit
+number we would have to repeat addition $O(2^N)$ times in order to do
+a multiplication.  Having a formula for point doubling allows us to
+reduce this to $O(N)$ point doubles along with $O(N)$ point adds by
+storing some intermediate calculations along the way, just like the
+long multiplication algorithm tought in grade school.  There is no
+point-halving operation, so performing the inverse of a point
+multiplication still requires $O(2^N)$ operations -- that's where the
+assymetry comes from.
+
+The full ECDSA algorithm essentally consists of doing a point
+multiplication to generate the private and public keys -- the private
+key is a random integer and the public key is that integer multiplied
+by a well-known point, known as the generator point.  The remainder of
+ECDSA consists of a few mathematical operations that generate enough
+information to verify a signature (shown in Figure~\ref{ecdsa-sign}),
+and then the inverse of that operation to verify a signature (shown in
+Figure~\ref{ecdsa-verify}).  In these figures, ``$*$'' is a point
+multiplication, while ``$\times$'' is a modular multiplication --
+there is about a factor of $1000$ speed difference between the two.
+
+\begin{figure}[ht]
+  \begin{center}
+    \includegraphics[width=0.7\linewidth]{ecdsa_sign.uncrop.pdf}
+  \end{center}
+
+  \caption{ECDSA Signature Algorithm
+    \label{ecdsa-sign}}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{center}
+    \includegraphics[width=0.7\linewidth]{ecdsa_verify.uncrop.pdf}
+  \end{center}
+
+  \caption{ECDSA Verification Algorithm
+    \label{ecdsa-verify}}
+\end{figure}
+
+Due to the large difference in complexity the point multiplication
+algorithm and the remainder of the operations, the main focus of
+building a fast ECDSA implementation is building a fast point multiplier
 
 \section{Implementing ECDSA}
 
@@ -132,13 +216,14 @@ FPGA implementations.  Unfortunately these studies don't present power
 numbers, which is problematic because energy is the main limiting
 factor for swarm applications.
 
-FIXME: Here's where we should describe the computational patterns of
-ECDSA, use those flow charts.
-
-\section{ASIC Implementation}
-
-FIXME: Discuss the coprocessor interface, why it's built the way we
-did (ie, no memory).  What else?
+Figure~\ref{ecdsa-sign} shows a flowchart for the signing operation
+and Figure~\ref{ecdsa-verify} shows a flowchart for the verification
+operation.  Both of these operations are dominated (approximately
+$99.9\%$ of the runtime) by the point multiplication blocks.  As such,
+most of the effort of this project was spent building a point
+multiplication block.  That said, point multiplication involves
+repeating point doubling and addition, which themselves involve
+repeating modular multiplication and inversion.
 
 \section{Software Test Bench}
 
@@ -165,12 +250,11 @@ attributed to two shortcommings: algorithms and tuning.
 OpenSSL uses a number of significantly more complicated cryptographic
 operations that our code does.  Specifically, it uses a projective
 point representation that allows for the conversion of a large number
-of modular multiplications into regular integer multiplications
-(FIXME: is that what projective does? I forget...).  Implementing
-these algorithmic improvements should show significant speedups for
-both our software and hardware, so it's not entirely a bad thing.  We
-estimate about a $20\times$ gain can be had from algorithmic
-improvements alone!
+of modular multiplications into regular integer multiplications.
+Implementing these algorithmic improvements should show significant
+speedups for both our software and hardware, so it's not entirely a
+bad thing.  We estimate about a $20\times$ gain can be had from
+algorithmic improvements alone!
 
 In addition to using better algorithms, OpenSSL is implemented better
 than our software was.  Specifically, OpenSSL contains hand-tuned
@@ -193,52 +277,112 @@ numbers are probably the most reasonable to compare our ASIC
 implementation against, as they're the most realistic picture of the
 current state of the art.
 
-\section{Results}
+\section{ASIC Implementation}
 
-FIXME: Possibly some floorplans here?
+The ASIC implementation used the same algorithms as the software
+implementation, and as such looks very similar.  Most ASICs end up
+being limited by memory bandwidth, but ECDSA is so computationally
+expensive we're not even close to being bandwidth limited (we move
+roughly one bit per thousand cycles).  This has the very nice property
+of allowing us to completely ignore memory, which means that the
+accelerator RTL ends up looking shockingly similar to the software
+implementation.
 
-FIXME: Some discussion of how the various numbers came to exist... :)
+Our coprocessor interface is very simple -- essentially we relied on
+the fact that almost no data was moved to avoid building anything
+complicated.  A block diagram of the interface is shown in
+Figure~\ref{coproc}.  The general idea is that the coprocessor has two
+source registers, A and B and one destination register, C.
 
-Our ASIC implementation of ECDSA performs all elliptic field arithmetic,
-including point multiplication, addition, doubling, as well as modular
-multiplication and modular inversion. Our hardware supports key sizes
-up to 256 bits, as that is the suggested security level.
+The host writes the data it would like to have computed to the source
+registers by emiting a copy instruction a number of times (depending
+on the size of the data type).  The host then emits an assembly
+instruction that signifies what sort of operation it would like done.
+The accelerator's control logic then sequences the functional units in
+the appropriate order, eventually writing back the result to the
+destination register.  The host can then emit assembly instructions to
+read the results back -- if the host emits a read operation too early
+it will block until the results are ready.
 
-We created instructions to expose each of the operations listed above. Operands
-are pushed 64-bits at a time. We opted to have operands pushed over the two 64-bit
-buses instead of having the accelerator fetch operands from memory. This primarily 
-comes at the cost of register space in the rocket core (correct?), as it only takes 
-four to twelve instructions to push all operands to the accelerator. In addition to 
-setting the operands, the elliptic curve parameters must also be sent. This is 256 bits
-for the modulus of the curve, and 256 bits for the "a" parameter of the curve, which
-is needed for the point doubling operation. Once a curve is set, it will most likely
-be used many times (correct?), so this extra overhead of four instructions is also 
-negligible. 
+\begin{figure*}[t]
+  \begin{center}
+    \includegraphics[width=0.5\linewidth]{coproc.svg}
+  \end{center}
 
-One of the biggest challenges in hardware was making sure that the result of each 
-operation did not exceed the modulus. This means that on each addition becomes an 
-add, a comparision, and potentially a subtraction. The modular multiplication then 
-also consists of repeated addition and shifting instead of a large multiply followed
-by repeated subtraction of the modulus. The paths with the largest propogation delay
-have full adder cells, and it is likely due to the add-check-subtract operation with 
-256-bit fields, which is used numerous times throughout the functional units. This 
-limits the clock period to 3.5 ns. It is not obvious how to best pipeline this due 
-to the nature of the design, as there would be a tremendous cost in pipeline registsrs, 
-but it should be explored in the future. 
+  \caption{Rocket Coprocessor Interface
+    \label{coproc}}
+\end{figure*}
 
-Currently, we only have a simulated version of the rocket interface working correctly. 
-We have not been able to get the compilation of our interface with the rocket to correctly
-compile into Verilog code. 
+While this coprocessor interface has very high overhead, it turns out
+that our software implementation was sufficiently bad that doing any
+fine-grained accelerator operations ended up being pointless because
+of the software overhead (in addition to the interface overhead).  For
+the interesting configurations the interface was very low overhead so
+it didn't end up causing too much trouble.
 
 \section{Benchmarking Methodology}
 
-FIXME: Here's where I'll introduce the software shim that we wrote,
-and discuss why we're comparing with OpenSSL on x86.
+Currently, we only have a simulated version of the rocket interface
+working correctly.  We have not been able to get the compilation of
+our interface with the rocket to correctly compile into Verilog code.
+This means we couldn't actually run full signing tests through
+primetime to get power numbers.  Instead we got ballpark power numbers
+by running the software stack through Spike with a simulator
+coprocessor to count the number of operations performed.  We then
+measured the power of each operation (either Rocket integer operations
+or accelerator operations) with primetime, and summed up the total.
+
+While this isn't the greatest result, it should give us reasonable
+accurate power numbers because of our algorithm.  Essentially here
+we're relying on the fact that our algorithm never touches memory,
+which is what allows us to assume that the Rocket core will use a
+predictable amount of power.
+
+The one big problem with this methodology is that it neglects the
+power used moving data between Rocket and the coprocessor -- it just
+treats these cycles as a regular integer operation.  Lucikly, for any
+of the interesting configurations listed in the results section, this
+overhead should be minimal -- easily within $0.1\%$.  This is
+essentially because our software ECDSA implementation is so bad that
+the number of cycles run by Rocket whenever we are doing anything in
+software dwarfs the number of cycles moving data.  Thus, even if
+moving data between Rocket and the coprocessor is very expensive
+relative to moving data within a Rocket core, it won't make much of a
+difference in the final power results.
 
 \section{Results}
 
-Possibly some floorplans here?
-(I'll see if I can get anything that looks interesting)
+Our ASIC implementation of ECDSA performs all elliptic field
+arithmetic, including point multiplication, addition, doubling, as
+well as modular multiplication and modular inversion. Our hardware
+supports key sizes up to 256 bits, as that is the suggested security
+level.
+
+We created instructions to expose each of the operations listed
+above. Operands are pushed 64-bits at a time. We opted to have
+operands pushed over the two 64-bit buses instead of having the
+accelerator fetch operands from memory. This primarily comes at the
+cost of register space in the rocket core (correct?), as it only takes
+four to twelve instructions to push all operands to the
+accelerator. In addition to setting the operands, the elliptic curve
+parameters must also be sent. This is 256 bits for the modulus of the
+curve, and 256 bits for the "a" parameter of the curve, which is
+needed for the point doubling operation. Once a curve is set, it will
+most likely be used many times (correct?), so this extra overhead of
+four instructions is also negligible.
+
+One of the biggest challenges in hardware was making sure that the
+result of each operation did not exceed the modulus. This means that
+on each addition becomes an add, a comparision, and potentially a
+subtraction. The modular multiplication then also consists of repeated
+addition and shifting instead of a large multiply followed by repeated
+subtraction of the modulus. The paths with the largest propogation
+delay have full adder cells, and it is likely due to the
+add-check-subtract operation with 256-bit fields, which is used
+numerous times throughout the functional units. This limits the clock
+period to 3.5 ns. It is not obvious how to best pipeline this due to
+the nature of the design, as there would be a tremendous cost in
+pipeline registsrs, but it should be explored in the future.
 
 \begin{table}[ht]
   \begin{center}
@@ -262,8 +406,6 @@ Possibly some floorplans here?
   \caption{Comparision of results to previous work
     \label{results}}
 \end{table}
-
-FIXME: What to say here?  Maybe a graph of those area/power numbers?
 
 \section{Future Work}
 
@@ -314,31 +456,19 @@ benchmark.  This could be very interesting because we may be able to
 provide light-weight accelerator contexts (compared to POSIX threads),
 which could result in an interesting userspace wrapper.
 
-FIXME: Functional unit sizes, hard-coded
-curve parameters, parallel software
-
-Due to time constraints, there are many useful improvements that could be made
-to our accelerator. Elliptic field arthimetic is not an easy concept to grasp, and
-we had to make due with using only basic algorithms. One improvement that could be made
-on the ellipic field arthimetic is transforming a two-dimensional point into a three-dimensional
-represenation for point multiplication. In this case, only one modular inversion is needed
-for the entire point multiplication (as opposed to hundreds). This further might make it 
-unnecessary for an inversion hardware unit to be needed at all. Another improvement is to use
-a Montgomery Multiplication (cite?). This is a complex algorithm that performs successive 
-multiplications fast after some intial overhead. If these algorithmic enhancements were made we
-would surely see a tremendous speedup.
-
-As stated above, we are limited to a 300 MHz clock. This along with our naive algorithm implementation 
-does not yield a significant improvement over the most finely-tuned software implementation. Pipelining 
-is not trivial as discussed earlier, but we suspect it would drastically increase our clock frequency. 
-
-
-
+Another interesting aspect to explore would be an improved coprocessor
+interface.  It's possible that there could be a very light-weight
+accelerator that could provide significant energy-per-op improvements
+without requiring much overhead.  Unfortunately I don't think it will
+be possible to build this with the ROCC interface because of the
+inherent latency involved.
 
 \section{Course Feedback}
 
-FIXME: I don't know much to say about the course... More instruction on how to use Chisel
-and better Chisel tutorials were my main concerns.
+Kevin suggests that Chisel was very tricky to learn, and that improved
+tutorials would be helpful.  Palmer had previously learned Chisel, but
+found that there were a number of pitfalls that led to some debugging
+headaches.
 
 \bibliographystyle{plain}
 \bibliography{bibliography}
