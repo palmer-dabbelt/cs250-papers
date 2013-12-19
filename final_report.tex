@@ -16,7 +16,12 @@ accelerator was targeted at supporting the elliptic curve digital
 signature algorithm (ECDSA), a NIST standard widely used on the
 Internet for digital signatures.  We built off of previous work by
 doing a more involved design-space exploration, focusing on
-hardware/software co-tuning.
+hardware/software co-tuning. We were succesful in implementing the
+primary operation needed in ECDSA which is an elliptic curve point 
+multiplication. A simulated version of the operation works with the
+Rocket Core, but the full toolchain did not run. With some algorithmic
+improvements to our accelerator, we can get tremendous improvements
+over a software implementation.
 
 \section{Elliptic Curve Cryptography}
 
@@ -195,6 +200,11 @@ Due to the large difference in complexity the point multiplication
 algorithm and the remainder of the operations, the main focus of
 building a fast ECDSA implementation is building a fast point multiplier
 
+The EC point multiplication is essentially a hierarchy of control
+logic that has the integer aritmetic at the base. This was the
+motivation of the hardware/software cotuning: at what level of the
+hierarchy should the hardware/software division be made?
+
 \section{Implementing ECDSA}
 
 Unlike finite integer fields, elliptic curves do not map directly to
@@ -250,16 +260,16 @@ attributed to two shortcommings: algorithms and tuning.
 OpenSSL uses a number of significantly more complicated cryptographic
 operations that our code does.  Specifically, it uses a projective
 point representation that allows for the conversion of a large number
-of modular multiplications into regular integer multiplications.
-Implementing these algorithmic improvements should show significant
-speedups for both our software and hardware, so it's not entirely a
-bad thing.  We estimate about a $20\times$ gain can be had from
-algorithmic improvements alone!
+of modular inversions to a single inversion at the end of the
+multiplication.  Implementing these algorithmic improvements should
+show significant speedups for both our software and hardware, so it's
+not entirely a bad thing.  We estimate about a $20\times$ gain can be
+had from algorithmic improvements alone!
 
 In addition to using better algorithms, OpenSSL is implemented better
 than our software was.  Specifically, OpenSSL contains hand-tuned
 assembly for a number of critical paths that compilers appear to
-generate bad code for (I'm specifically thinking of carry chains for
+generate bad code for (specifically thinking of carry chains for
 big integer operations).  Part of the problem that our implementation
 had was probably related to the fact that it attempts to be
 paramaterizable, which almost certainly defeats a lot of compiler
@@ -267,10 +277,10 @@ hueristics (I'd love a way to tell a compiler to generate 4 different
 optimized versions of a function, sweeping arcoss the 4 different
 values that one particularly interesting input can have).
 
-Despite these shortcomings, I don't believe that the software troubles
+Despite these shortcomings, we don't believe that the software troubles
 completely invalidate the results from this project.  We spent about
-the same amount of time on both the software and hardware, which
-appears fair to me.  More importantly, we have numbers comparing
+the same amount of time on both the software and hardware. 
+More importantly, we have numbers comparing
 against the full-strength OpenSSL code running on x86 (a platform that
 OpenSSL is highly optimized for\cite{kasper-openssl_ecc}).  These
 numbers are probably the most reasonable to compare our ASIC
@@ -319,6 +329,48 @@ fine-grained accelerator operations ended up being pointless because
 of the software overhead (in addition to the interface overhead).  For
 the interesting configurations the interface was very low overhead so
 it didn't end up causing too much trouble.
+
+Our ASIC implementation of ECDSA performs all elliptic field arithmetic,
+including point multiplication, addition, doubling, as well as modular
+multiplication and modular inversion. Our hardware supports key sizes
+up to 256 bits, as that is the suggested security level.
+
+We created instructions to expose each of the operations listed
+above. Operands are pushed 64-bits at a time. We opted to have
+operands pushed over the two 64-bit buses instead of having the
+accelerator fetch operands from memory. This primarily comes at the
+cost of register space in the rocket core (correct?), as it only takes
+four to twelve instructions to push all operands to the
+accelerator. In addition to setting the operands, the elliptic curve
+parameters must also be sent. This is 256 bits for the modulus of the
+curve, and 256 bits for the "a" parameter of the curve, which is
+needed for the point doubling operation. Once a curve is set, it will
+most likely be used many times, so this extra overhead of four
+instructions is also negligible.
+
+One of the biggest challenges in hardware was making sure that the
+result of each operation did not exceed the modulus. This means that
+on each addition becomes an add, a comparision, and potentially a
+subtraction. The modular multiplication then also consists of repeated
+addition and shifting instead of a large multiply followed by repeated
+subtraction of the modulus. The paths with the largest propogation
+delay have full adder cells, and it is likely due to the
+add-check-subtract operation with 256-bit fields, which is used
+numerous times throughout the functional units. This limits the clock
+period to 3.5 ns. It is not obvious how to best pipeline this due to
+the nature of the design, as there would be a tremendous cost in
+pipeline registsrs, but it should be explored in the future.
+
+Currently, we only have a simulated version of the rocket interface
+working correctly.  We have not been able to get the compilation of
+our interface with the rocket to correctly compile into Verilog
+code. It is unclear why the C++ backend works in this case while the
+Verilog does not.
+
+Our hardware was written using Chisel. Verilog code was generated from
+Chisel and run through the Synopsys tool flow using a 32nm educational
+standard cell library. Multi-threshold cells were used, which cut the
+power numbers nearly in half.
 
 \section{Benchmarking Methodology}
 
@@ -409,18 +461,30 @@ pipeline registsrs, but it should be explored in the future.
 
 \section{Future Work}
 
-The first order of business should probably be getting our software
+Due to time constraints, there are many useful improvements that could
+be made to our accelerator. Elliptic field arthimetic is not an easy
+concept to grasp, and we had to make due with using only basic
+algorithms. One improvement that could be made on the ellipic field
+arthimetic is transforming a two-dimensional point into a
+three-dimensional represenation for point multiplication. In this
+case, only one modular inversion is needed for the entire point
+multiplication (as opposed to hundreds). This further might make it
+unnecessary for an inversion hardware unit to be needed at
+all. Another improvement is to use Montgomery
+Multiplication\cite{mmm-hw_ecc}. This is a complex algorithm that
+performs successive multiplications fast after some intial
+overhead. If these algorithmic enhancements were made we would surely
+see a tremendous speedup. Both of these improvements have interesting
+time/space tradeoffs for hardware implementations, so could serve as
+additional design points for our accelerator.
+
+A primary concern should be getting our software
 implementation up to snuff -- this almost certainly means adopting
 OpenSSL as our testbench, hand-tuning its assembly for RISC-V, and
 then modifying it to be easily paramaterizable so it can target our
-family of accelerators.
-
-We will then have to modify our hardware implementation to take into
-account the improvements that OpenSSL brings.  There are two important
-algorithmic improvements that need to be made: using a projective
-representation and implementing montgomery multipliers.  Both of these
-have interesting time/space tradeoffs for hardware implementations, so
-could serve as additional design points for our accelerator.
+family of accelerators. We will then have to modify our hardware 
+implementation to take into account the algorithmic improvements that 
+OpenSSL brings.
 
 In addition to algorithmic improvements, there are a number of tricks
 one can play to squeeze performance out of ECDSA.  The most important
@@ -445,9 +509,9 @@ as there are cases where one step of an algorithm requires two
 additions back-to-back.  Tweaking these state machines should provide
 an interesting trade-off between speed and power usage: essentially
 the higher clock rate will keep more transistors toggling, they just
-won't all be doing useful work.
+will not all be doing useful work.
 
-There are also a number of benchmarking improvements that would be
+Finally, a number of benchmarking improvements that would be
 interesting to see done.  Specifically, it would be good to see a
 full-system benchmark running with our accelerator attached.  This
 would be particularly interesting because it would allow for some
@@ -463,12 +527,19 @@ without requiring much overhead.  Unfortunately I don't think it will
 be possible to build this with the ROCC interface because of the
 inherent latency involved.
 
-\section{Course Feedback}
+CS250 was a great course for learning how to design VLSI chips using
+the toolchain. It was difficult learning a new programming language to
+construct hardware while also learning how to work with the VLSI
+toolflow. This could have been assisted with better tutorials on
+Chisel, specifically with writing test harnesses for both the C++
+simulator and more importantly the Verilog backend.
 
-Kevin suggests that Chisel was very tricky to learn, and that improved
-tutorials would be helpful.  Palmer had previously learned Chisel, but
-found that there were a number of pitfalls that led to some debugging
-headaches.
+It would also have been helpful if instead of giving us ready-made
+directories and skeleton code in the early labs we were given
+step-by-step instructions on how to make a Chisel project from scratch
+and convert it to C++ and Verliog, because we mostly ended up hacking
+the the labs in really ugly ways with our accelerator to push it
+through the toolflow.
 
 \bibliographystyle{plain}
 \bibliography{bibliography}
