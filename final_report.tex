@@ -118,9 +118,8 @@ a point on an EC, a tangent line at that point is drawn which will
 intersect the curve at exactly one other point. The result of the
 double operation is that intersection point reflected over the X-axis.
 An example of the geometric definition of point addition is shown in
-Figure~\ref{point-add-graph}, which involves drawing a line between
-two points on the curve, tracing its intersection with the curve, and
-then a reflection over the X axis -- point doubling is almost exactly
+Figure~\ref{point-add-graph}, obtained from Certicom, which involves 
+drawing a line between two points on the curve, tracing its intersection with the curve, and then a reflection over the X axis -- point doubling is almost exactly
 the same, except with a tangent instead of a line between the two
 points (you can think of the tangent like the limit of a line between
 two points as those two points approach each other).
@@ -140,7 +139,7 @@ by the equation shown in Figure~\ref{point-dub-eq}.  In these
 equations all operations are modulo the order of the curve, which is
 the same order of magnitune of the prime modulus of the curve (but
 it's a different number).  Additionally, the curve constant $a$ is as
-defined by NIST (and not by Wikipedia).
+defined by NIST.
 
 \begin{figure}[ht]
   $$ \lambda = \frac{P_y - Q_y}{P_x - Q_x} $$
@@ -156,7 +155,7 @@ defined by NIST (and not by Wikipedia).
   $$ R_x = \lambda^2 - P_x - Q_x $$
   $$ R_y = \lambda(P_x - R_x) - P_y $$
 
-  \caption{Point addition formula
+  \caption{Point double formula
     \label{point-dub-eq}}
 \end{figure}
 
@@ -171,10 +170,8 @@ multiplication.
 It is possible formulate the discrete logarithmic problem over
 ellitic curves by repeating addition as described above.  Under
 standard hardness assumptions, this formulation of the discrete
-logarithm problem is assymetric (actually, I think this is one of the
-standard hardness assumptions).  As far as I know it hasn't been
-proven, but the general idea is simple: point multiplication is
-defined as repeated addition.  Without point doubling, for an $N$-bit
+logarithm problem is assymetric (actually, this is one of the
+standard hardness assumptions).  The general idea is simple: point multiplication is defined as repeated addition.  Without point doubling, for an $N$-bit
 number we would have to repeat addition $O(2^N)$ times in order to do
 a multiplication.  Having a formula for point doubling allows us to
 reduce this to $O(N)$ point doubles along with $O(N)$ point adds by
@@ -268,14 +265,14 @@ instance of this software that cooresponds with every accelerator
 configuration that made sense and fully test our hardware.
 
 Unfortunately, this software implementation proved to be the weakest
-point of this entire project.  As shown in Figure~\ref{results}, our
+point of this entire project.  As shown in Table~\ref{results}, our
 code is hundreds of times slower than OpenSSL -- this is after a
 significant amount of tuning, our first implementations were hundreds
 of thousands of times slower than OpenSSL!  This trouble can be
 attributed to two shortcommings: algorithms and tuning.
 
 OpenSSL uses a number of significantly more complicated cryptographic
-operations that our code does.  Specifically, it uses a projective
+operations than our code does.  Specifically, it uses a projective
 point representation that allows for the conversion of a large number
 of modular inversions to a single inversion at the end of the
 multiplication.  Implementing these algorithmic improvements should
@@ -290,7 +287,7 @@ generate bad code for (specifically thinking of carry chains for
 big integer operations).  Part of the problem that our implementation
 had was probably related to the fact that it attempts to be
 paramaterizable, which almost certainly defeats a lot of compiler
-hueristics (I'd love a way to tell a compiler to generate 4 different
+hueristics (It would be great to tell a compiler to generate 4 different
 optimized versions of a function, sweeping arcoss the 4 different
 values that one particularly interesting input can have).
 
@@ -356,7 +353,7 @@ We created instructions to expose each of the operations listed
 above. Operands are pushed 64-bits at a time. We opted to have
 operands pushed over the two 64-bit buses instead of having the
 accelerator fetch operands from memory. This primarily comes at the
-cost of register space in the rocket core (correct?), as it only takes
+cost of register space in the rocket core, as it only takes
 four to twelve instructions to push all operands to the
 accelerator. In addition to setting the operands, the elliptic curve
 parameters must also be sent. This is 256 bits for the modulus of the
@@ -421,38 +418,6 @@ difference in the final power results.
 
 \section{Results}
 
-Our ASIC implementation of ECDSA performs all elliptic field
-arithmetic, including point multiplication, addition, doubling, as
-well as modular multiplication and modular inversion. Our hardware
-supports key sizes up to 256 bits, as that is the suggested security
-level.
-
-We created instructions to expose each of the operations listed
-above. Operands are pushed 64-bits at a time. We opted to have
-operands pushed over the two 64-bit buses instead of having the
-accelerator fetch operands from memory. This primarily comes at the
-cost of register space in the rocket core (correct?), as it only takes
-four to twelve instructions to push all operands to the
-accelerator. In addition to setting the operands, the elliptic curve
-parameters must also be sent. This is 256 bits for the modulus of the
-curve, and 256 bits for the "a" parameter of the curve, which is
-needed for the point doubling operation. Once a curve is set, it will
-most likely be used many times (correct?), so this extra overhead of
-four instructions is also negligible.
-
-One of the biggest challenges in hardware was making sure that the
-result of each operation did not exceed the modulus. This means that
-on each addition becomes an add, a comparision, and potentially a
-subtraction. The modular multiplication then also consists of repeated
-addition and shifting instead of a large multiply followed by repeated
-subtraction of the modulus. The paths with the largest propogation
-delay have full adder cells, and it is likely due to the
-add-check-subtract operation with 256-bit fields, which is used
-numerous times throughout the functional units. This limits the clock
-period to 3.5 ns. It is not obvious how to best pipeline this due to
-the nature of the design, as there would be a tremendous cost in
-pipeline registsrs, but it should be explored in the future.
-
 \begin{table}[ht]
   \begin{center}
     \begin{tabular}{c|ccc}
@@ -475,6 +440,14 @@ pipeline registsrs, but it should be explored in the future.
   \caption{Comparision of results to previous work
     \label{results}}
 \end{table}
+
+Table 2 shows a comparison of our work to previous FPGA implementations, as well
+as the design space exploration of having different functionality in the hardware 
+and software. 
+
+One important result to note is that certain blocks make sense to pair up in hardware. For example, a lot is gained from having modular multiplication and inversion in hardware as opposed to a single one. If the ECDSA algorithm is thought of as a hierarchy, then it can be seen that all layers in a hierarchy should be in hardware or none of them should be. 
+
+Another result is that it does it costs a significant amount to jump from the base of the hierarchy (multiply and invert), to the elliptic curve point and add layer. Add and double are complicated control blocks with many adders, and the area of the chip is tripled. However, to move from the add and double layer to the multiply layer, there is very little cost in area for a large improvement in energy/op. When the full point multiply is put in hardware, we start to approach the $\mu$J/op territory that would desired for devices on the SwarmOS. With algorithmic and micro-architectual improvements, we will be even closer. 
 
 \section{Future Work}
 
@@ -508,7 +481,7 @@ one can play to squeeze performance out of ECDSA.  The most important
 one appears to be to build hand-crafted routines for operating on
 particular curves -- for example, a mod routine for NIST's $p256$
 curve is hundredes of times faster than a generic
-one\cite{nist-routines}.
+one.
 
 There are a number of architectural improvements that can be made to
 our coprocessor interface that can help mitigate the large overhead
@@ -540,7 +513,7 @@ which could result in an interesting userspace wrapper.
 Another interesting aspect to explore would be an improved coprocessor
 interface.  It's possible that there could be a very light-weight
 accelerator that could provide significant energy-per-op improvements
-without requiring much overhead.  Unfortunately I don't think it will
+without requiring much overhead.  Unfortunately we don't think it will
 be possible to build this with the ROCC interface because of the
 inherent latency involved.
 
@@ -548,7 +521,7 @@ CS250 was a great course for learning how to design VLSI chips using
 the toolchain. It was difficult learning a new programming language to
 construct hardware while also learning how to work with the VLSI
 toolflow. This could have been assisted with better tutorials on
-Chisel, specifically with writing test harnesses for both the C++
+Chisel, specifically with tutorials on writing test harnesses for both the C++
 simulator and more importantly the Verilog backend.
 
 It would also have been helpful if instead of giving us ready-made
