@@ -1,0 +1,37 @@
+Hi, I'm Palmer, a grad student here in the ASPIRE Lab.  Kevin and I
+built an elliptic curve cryptography engine attached via the Rocket
+coprocessor interface.
+
+Elliptic curve cryptography is a particular sort of public key
+cryptography that relies on different mathematical formulations than
+the more widely known sorts of public-key crypto systems that are
+based on prime integers.
+
+Specifically, our project focused on ECDSA, the elliptic curve digital
+signature algorithm, which is a widely-used NIST standard for digital
+signatures (if you look in your SSH's authorized_keys file you'll
+probably find some ECDSA keys).
+
+ECDSA is essentially just DSA but using a different form of the
+discrete-logarithm problem: rather than exponentiation of prime
+integers we use multiplication over elliptic curves.  Elliptic curves
+bring one big advantage: there are no publicly known sub exponential
+algorithms for elliptic curve division (while there are for prime
+factorization).  Effectively this means that ECDSA keys are a lot
+smaller than DSA keys, which makes them particularly suitable for
+hardware acceleration.
+
+As you've probably already determined: neither of us are crypto
+people.  The real interesting aspect of this project was to explore
+hardware/software cotuning.  ECDSA boils down to a number of
+mathematical operations, each of which can either be performed in
+dedicated hardware or on a general purpose core.  For the project, we
+implemented ECDSA in software in such a manner that we could run each
+operation on both a Rocket core and on a elliptic-curve coprocessor
+(which we also built RTL for).  This allows us to get a nice area vs
+energy/op tradeoff by changing what was in hardware vs software.
+
+We've really only managed to scratch the surface of what can be done
+in this space, but in a semester we managed to get about a factor of
+100 improvement in enegery per op as compared to OpenSSL on x86, so I
+think the preliminary results are somewhat promising.
