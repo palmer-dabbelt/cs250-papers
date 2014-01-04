@@ -35,10 +35,3 @@ We've really only managed to scratch the surface of what can be done
 in this space, but in a semester we managed to get about a factor of
 100 improvement in enegery per op as compared to OpenSSL on x86, so I
 think the preliminary results are somewhat promising.
-
-
-
-Layout slide
-Numbers
-Dieout shot
-What feedback
